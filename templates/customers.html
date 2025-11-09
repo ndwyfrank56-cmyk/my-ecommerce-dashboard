@@ -1,0 +1,981 @@
+{% extends 'base.html' %}
+
+{% block title %}Registered Customers{% endblock title %}
+
+{% block content %}
+<section class="orders-page">
+  <!-- MOBILE STYLES FOR CUSTOMERS PAGE -->
+  <style>
+    @media (max-width: 768px) {
+      .orders-page {
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      .orders-container {
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      .orders-row {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      /* Keep 2 columns on mobile */
+      .order-item {
+        padding: 12px !important;
+        margin: 0 !important;
+      }
+      .order-top h4 {
+        font-size: 13px !important;
+      }
+      .customer-name {
+        font-size: 13px !important;
+      }
+      .order-info {
+        font-size: 11px !important;
+      }
+      .info-row {
+        margin-bottom: 4px !important;
+      }
+    }
+    /* Truncate long emails and text in info rows */
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      min-width: 0;
+    }
+    .info-row span:first-child {
+      flex-shrink: 0;
+    }
+    .info-row span:last-child {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+      text-align: right;
+    }
+    @media (max-width: 768px) {
+      .order-total {
+        font-size: 14px !important;
+      }
+      .order-buttons {
+        flex-direction: column !important;
+        gap: 4px !important;
+      }
+      .btn-assign, .btn-print {
+        font-size: 11px !important;
+        padding: 6px 8px !important;
+      }
+      .icon-btn {
+        width: 28px !important;
+        height: 28px !important;
+      }
+    }
+    @media (max-width: 480px) {
+      .orders-row {
+        gap: 6px !important;
+      }
+      .order-item {
+        padding: 10px !important;
+      }
+    }
+  </style>
+  <div class="orders-header d-flex align-items-center justify-content-between mb-3">
+    <h1 class="h5 m-0">Registered Customers</h1>
+    <div class="d-flex gap-2">
+      <button class="btn-refresh" onclick="location.reload()"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+    </div>
+  </div>
+
+  <!-- Stats Grid (compact) -->
+  <div class="stats-grid">
+    <div class="stat-card stat-total">
+      <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+      <div class="stat-content">
+        <div class="stat-number">{{ (stats.total if stats is defined and stats.total is defined else 0) }}</div>
+        <div class="stat-label">Registered Customers</div>
+      </div>
+    </div>
+    <div class="stat-card stat-pending">
+      <div class="stat-icon"><i class="fa-solid fa-user-check"></i></div>
+      <div class="stat-content">
+        <div class="stat-number">{{ (stats.active_30d if stats is defined and stats.active_30d is defined else 0) }}</div>
+        <div class="stat-label">Active (30d)</div>
+      </div>
+    </div>
+    <div class="stat-card stat-delivered">
+      <div class="stat-icon"><i class="fa-solid fa-rotate-left"></i></div>
+      <div class="stat-content">
+        <div class="stat-number">{{ (stats.returning_users if stats is defined and stats.returning_users is defined else 0) }}</div>
+        <div class="stat-label">Returning Users</div>
+      </div>
+    </div>
+    <div class="stat-card stat-revenue">
+      <div class="stat-icon"><i class="fa-solid fa-wallet"></i></div>
+      <div class="stat-content">
+        <div class="stat-number">RWF {{ "{:,.0f}".format(((stats.avg_spend_per_user if stats is defined and stats.avg_spend_per_user is defined else 0)|float)) }}</div>
+        <div class="stat-label">Avg Spend / User</div>
+      </div>
+    </div>
+    <div class="stat-card stat-total">
+      <div class="stat-icon"><i class="fa-solid fa-list-ol"></i></div>
+      <div class="stat-content">
+        <div class="stat-number">{{ (stats.avg_orders_per_user if stats is defined and stats.avg_orders_per_user is defined else 0) }}</div>
+        <div class="stat-label">Avg Orders / User</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search + Filters (aligned with products/orders) -->
+  <div class="controls-section">
+    <div class="search-box">
+      <i class="fa fa-search"></i>
+      <input type="text" name="q" value="{{ (filters.q if filters is defined and filters.q is defined else '') }}" placeholder="Search registered customers by name, email or phone..." form="customers-filter-form" />
+    </div>
+  </div>
+
+  <form id="customers-filter-form" class="filters-row" method="get" action="{{ url_for('customers') }}">
+    <input type="number" class="filter-input" step="1" min="0" name="min_orders" placeholder="Min Orders" value="{{ (filters.min_orders if filters is defined and filters.min_orders is defined else '') }}" />
+    <input type="number" class="filter-input" step="1" min="0" name="max_orders" placeholder="Max Orders" value="{{ (filters.max_orders if filters is defined and filters.max_orders is defined else '') }}" />
+    <input type="number" class="filter-input" step="0.01" min="0" name="min_spent" placeholder="Min Spent (RWF)" value="{{ (filters.min_spent if filters is defined and filters.min_spent is defined else '') }}" />
+    <input type="number" class="filter-input" step="0.01" min="0" name="max_spent" placeholder="Max Spent (RWF)" value="{{ (filters.max_spent if filters is defined and filters.max_spent is defined else '') }}" />
+  </form>
+
+  <!-- Customers Cards Grid (reuse orders card style) -->
+  <div class="orders-container">
+    <div class="orders-row">
+      {% set C = customers if customers is defined else [] %}
+      {% for c in C %}
+      <div class="order-item">
+        <div class="order-top">
+          <h4>CUS-{{ "%03d"|format(c.id) }}</h4>
+          <span class="status-badge status-delivered">{{ (c.tier or 'CUSTOMER') }}</span>
+        </div>
+
+        <div class="order-actions">
+          <button class="icon-btn btn-email-customer" data-email="{{ c.email or '' }}" data-name="{{ c.name or '' }}" {% if not c.email %}disabled{% endif %} title="Send Email"><i class="fa fa-envelope"></i></button>
+          <button class="icon-btn btn-delete-customer" data-user-id="{{ c.user_id or '' }}" {% if not c.user_id %}disabled{% endif %} title="Delete"><i class="fa fa-trash"></i></button>
+        </div>
+
+        <div class="customer-name">{{ c.name or 'Unknown' }}</div>
+
+        <div class="order-info">
+          <div class="info-row"><span>Email:</span> {{ c.email or '—' }}</div>
+          <div class="info-row"><span>Phone:</span> {{ c.phone or '—' }}</div>
+          <div class="info-row"><span>Orders:</span> {{ c.orders_count or 0 }}</div>
+          <div class="info-row"><span>Last Order:</span> {{ c.last_order_date or '—' }}</div>
+        </div>
+
+        <div class="order-total">RWF {{ "{:,.0f}".format((c.total_spent or 0)|float) }}</div>
+
+        <div class="order-buttons">
+          <button class="btn-assign btn-view-orders" data-user-id="{{ c.user_id or '' }}" data-phone="{{ c.phone or '' }}" data-name="{{ c.name or '' }}">View Orders</button>
+        </div>
+      </div>
+      {% else %}
+      <div class="no-orders-message">
+        <div class="no-orders-icon">
+          <i class="fa-solid fa-search"></i>
+        </div>
+        <h3>No customers found</h3>
+        <p>Try adjusting your search terms.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div id="confirm-overlay" class="confirm-overlay" style="display:none;">
+    <div class="confirm-modal">
+      <button class="modal-close-btn" id="modal-close-btn">&times;</button>
+      <h3 class="confirm-title" id="confirm-title">Are you sure?</h3>
+      <p class="confirm-message" id="confirm-message">This action cannot be undone.</p>
+      <div class="confirm-buttons">
+        <button class="confirm-btn confirm-cancel" id="confirm-cancel">✕ Cancel</button>
+        <button class="confirm-btn confirm-yes" id="confirm-yes">Yes, Continue</button>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- Floating Modal for Customer Orders -->
+<style>
+  /* Confirmation Modal */
+  .confirm-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    backdrop-filter: blur(8px);
+    animation: fadeIn 0.2s ease;
+  }
+  .confirm-modal {
+    background: rgba(30,30,35,0.98);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 32px 40px;
+    max-width: 420px;
+    width: 90%;
+    box-shadow: 0 25px 70px rgba(0,0,0,0.8);
+    text-align: center;
+    animation: slideUp 0.3s ease;
+    position: relative;
+  }
+  .modal-close-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: transparent;
+    border: none;
+    color: rgba(255,255,255,0.5);
+    font-size: 32px;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    line-height: 1;
+  }
+  .modal-close-btn:hover {
+    color: #fff;
+    transform: rotate(90deg);
+  }
+  .confirm-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 12px;
+    margin-top: 0;
+  }
+  .confirm-message {
+    font-size: 14px;
+    color: rgba(255,255,255,0.6);
+    margin-bottom: 28px;
+    line-height: 1.6;
+  }
+  .confirm-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+  }
+  .confirm-btn {
+    padding: 12px 28px;
+    border-radius: 8px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .confirm-cancel {
+    background: rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.5);
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .confirm-yes {
+    background: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.9);
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  
+  #cust-modal-overlay.x-modal-overlay{ 
+    position: fixed; 
+    inset: 0; 
+    display: none; 
+    align-items: center; 
+    justify-content: center; 
+    background: rgba(0,0,0,0.7); 
+    z-index: 9999; 
+    backdrop-filter: blur(4px); 
+  }
+  
+  #cust-modal-overlay .x-modal{ 
+    width: 90vw; 
+    max-width: 600px; 
+    background: var(--surface); 
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 16px; 
+    overflow: hidden; 
+    box-shadow: 0 24px 64px rgba(0,0,0,0.5); 
+  }
+  
+  #cust-modal-overlay .x-modal-header{ 
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between; 
+    padding: 18px 24px; 
+    background: var(--surface); 
+    border-bottom: 1px solid var(--border);
+  }
+  
+  #cust-modal-overlay .x-modal-title{ 
+    font-weight: 600; 
+    font-size: 18px;
+    color: var(--text-primary); 
+  }
+  
+  #cust-modal-overlay .x-modal-close{ 
+    background: transparent; 
+    border: 1px solid var(--border); 
+    color: var(--text-muted); 
+    font-size: 14px; 
+    cursor: pointer; 
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  #cust-modal-overlay .x-modal-body{ 
+    padding: 20px 24px; 
+    max-height: 60vh; 
+    overflow: auto; 
+    background: var(--surface);
+  }
+  
+  .cust-orders{ padding: 0; }
+  
+  .cust-list{ 
+    display: grid; 
+    gap: 12px; 
+  }
+  
+  .cust-row { 
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between; 
+    gap: 16px; 
+    padding: 16px; 
+    background: rgba(255, 255, 255, 0.02); 
+    border: 1px dashed rgba(255, 255, 255, 0.1); 
+    border-radius: 10px; 
+    transition: all 0.2s ease;
+  }
+  
+  .cust-row:hover{ 
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(5, 150, 105, 0.3);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+  
+  .cust-row .left{ 
+    display: flex; 
+    align-items: center; 
+    gap: 12px; 
+    font-size: 14px; 
+  }
+  
+  .cust-row .ord-code{ 
+    font-weight: 700; 
+    font-size: 13px;
+    letter-spacing: 0.5px; 
+    color: #ffffff; 
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); 
+    padding: 6px 12px; 
+    border-radius: 6px; 
+    min-width: 80px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  }
+  
+  .cust-row .order-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    color: var(--text-muted);
+  }
+  
+  .cust-row .order-date {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+  
+  .cust-row .order-status {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: rgba(5, 150, 105, 0.2);
+    color: var(--accent);
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    width: fit-content;
+  }
+  
+  .cust-row .amt{ 
+    font-weight: 700; 
+    font-size: 15px;
+    color: var(--accent);
+  }
+  
+  .cust-empty{ 
+    text-align: center; 
+    color: var(--text-muted); 
+    padding: 40px 20px;
+    font-size: 14px;
+  }
+  
+  .cust-empty i {
+    font-size: 32px;
+    margin-bottom: 12px;
+    opacity: 0.3;
+    color: var(--text-muted);
+  }
+  
+  /* Custom scrollbar */
+  #cust-modal-overlay .x-modal-body::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  #cust-modal-overlay .x-modal-body::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 4px;
+  }
+  
+  #cust-modal-overlay .x-modal-body::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+  }
+  
+  #cust-modal-overlay .x-modal-body::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+</style>
+<div id="cust-modal-overlay" class="x-modal-overlay">
+  <div class="x-modal">
+    <div class="x-modal-header">
+      <div class="x-modal-title" id="cust-modal-title">User Orders</div>
+      <button class="x-modal-close" id="cust-modal-close">✕</button>
+    </div>
+    <div class="x-modal-body">
+      <div id="cust-orders" class="cust-orders">
+        <div class="cust-list" id="cust-orders-row"></div>
+      </div>
+    </div>
+  </div>
+  
+</div>
+
+<!-- Email Modal -->
+<div id="email-modal-overlay" class="x-modal-overlay">
+  <div class="x-modal">
+    <div class="x-modal-header">
+      <div class="x-modal-title" id="email-modal-title">Send Email to Customer</div>
+      <button class="x-modal-close" id="email-modal-close">✕</button>
+    </div>
+    <div class="x-modal-body">
+      <form id="email-form" class="email-form">
+        <input type="hidden" id="email-customer-email" name="customer_email">
+        <input type="hidden" id="email-customer-name" name="customer_name">
+        
+        <div class="form-group">
+          <label for="email-to">To:</label>
+          <input type="text" id="email-to" readonly class="form-control" style="background: rgba(255,255,255,0.05); cursor: not-allowed;">
+        </div>
+        
+        <div class="form-group">
+          <label for="email-subject">Subject: <span style="color: #ef4444;">*</span></label>
+          <input type="text" id="email-subject" name="subject" placeholder="Enter email subject..." required class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label for="email-message">Message: <span style="color: #ef4444;">*</span></label>
+          <textarea id="email-message" name="message" placeholder="Type your message here..." rows="8" required class="form-control"></textarea>
+        </div>
+        
+        <div class="form-buttons">
+          <button type="button" class="btn-cancel" id="email-cancel">Cancel</button>
+          <button type="submit" class="btn-send" id="email-send">
+            <i class="fa fa-paper-plane"></i> Send Email
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+  .email-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .form-group label {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-primary);
+  }
+  
+  .form-control {
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-family: inherit;
+    transition: all 0.2s ease;
+  }
+  
+  .form-control:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: rgba(255, 255, 255, 0.08);
+  }
+  
+  .form-control::placeholder {
+    color: var(--text-muted);
+    opacity: 0.6;
+  }
+  
+  textarea.form-control {
+    resize: vertical;
+    min-height: 150px;
+    line-height: 1.5;
+  }
+  
+  .form-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 8px;
+  }
+  
+  .btn-cancel, .btn-send {
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+  }
+  
+  .btn-cancel {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+  }
+  
+  .btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
+  }
+  
+  .btn-send {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .btn-send:hover {
+    background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+  }
+  
+  .btn-send:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  #email-modal-overlay.x-modal-overlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 99999 !important;
+    backdrop-filter: blur(8px);
+  }
+  
+  #email-modal-overlay .x-modal {
+    width: 90vw;
+    max-width: 600px;
+    background: var(--surface);
+    color: var(--text-primary);
+    border: none;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+    position: relative;
+    z-index: 100000;
+  }
+</style>
+
+<script>
+  (function(){
+    const overlay = document.getElementById('cust-modal-overlay');
+    const closeBtn = document.getElementById('cust-modal-close');
+    const titleEl = document.getElementById('cust-modal-title');
+    const ordersEl = document.getElementById('cust-orders');
+    const ordersRow = document.getElementById('cust-orders-row');
+
+    function rwf(v){ try{return 'RWF ' + Number(v||0).toLocaleString();}catch(e){ return 'RWF ' + v; } }
+    function openModal(){ overlay.style.display='flex'; }
+    function closeModal(){ overlay.style.display='none'; if(ordersRow) ordersRow.innerHTML=''; }
+    function setLoading(msg){
+      if(ordersRow) ordersRow.innerHTML = `<div class="cust-empty">${msg||'Loading…'}</div>`;
+    }
+
+    if(closeBtn) closeBtn.addEventListener('click', closeModal);
+
+    async function loadOrders(params){
+      const qs = new URLSearchParams(params);
+      const res = await fetch('/api/customers/orders?' + qs.toString(), { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } });
+      const data = await res.json();
+      if(!data.ok) throw new Error(data.error||'Failed to load orders');
+      const list = data.orders||[];
+      if(!list.length){ 
+        if(ordersRow) ordersRow.innerHTML = `
+          <div class="cust-empty">
+            <i class="fa-solid fa-shopping-cart"></i>
+            <div>No orders found for this customer</div>
+          </div>
+        `; 
+        return; 
+      }
+      if(ordersRow) ordersRow.innerHTML = '';
+      list.forEach(o=>{
+        console.log('Order object:', o); // Debug log
+        const row = document.createElement('div');
+        row.className = 'cust-row';
+        
+        // Format status for display
+        const status = (o.status || 'pending').toLowerCase();
+        const statusDisplay = status.charAt(0).toUpperCase() + status.slice(1);
+        
+        // Format date
+        const orderDate = o.created_at ? new Date(o.created_at).toLocaleDateString() : 'Unknown';
+        
+        row.innerHTML = `
+          <div class="left">
+            <span class="ord-code">ORD-${o.id || 'NO-ID'}</span>
+            <div class="order-info">
+              <div class="order-date">${orderDate}</div>
+              <div class="order-status">${statusDisplay}</div>
+            </div>
+          </div>
+          <div class="amt">${rwf(o.total_amount)}</div>
+        `;
+        ordersRow && ordersRow.appendChild(row);
+      });
+    }
+
+    let busy = false;
+    document.querySelectorAll('.order-item .btn-view-orders').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        if (busy) return;
+        busy = true;
+        btn.disabled = true;
+        const userId = btn.getAttribute('data-user-id');
+        const phone = btn.getAttribute('data-phone');
+        const name = btn.getAttribute('data-name');
+        titleEl.textContent = `Orders for ${name||phone||('Customer #' + (userId||''))}`;
+        try{
+          const params = {};
+          if(userId) params.user_id = userId;
+          if(phone) params.phone = phone;
+          if(name) params.name = name;
+          openModal();
+          setLoading('Loading orders…');
+          await loadOrders(params);
+        }catch(e){
+          if(ordersRow) ordersRow.innerHTML = `<div class="cust-empty" style="color:#ef4444;">${(e&&e.message)||'Failed to load orders'}</div>`;
+          openModal();
+        } finally {
+          btn.disabled = false;
+          busy = false;
+        }
+      });
+    });
+
+    // Confirmation modal functions
+    const confirmOverlay = document.getElementById('confirm-overlay');
+    const confirmTitle = document.getElementById('confirm-title');
+    const confirmMessage = document.getElementById('confirm-message');
+    const confirmYes = document.getElementById('confirm-yes');
+    const confirmCancel = document.getElementById('confirm-cancel');
+    const modalCloseBtn = document.getElementById('modal-close-btn');
+    let confirmCallback = null;
+
+    function showConfirm(title, message, callback){
+      confirmTitle.textContent = title;
+      confirmMessage.textContent = message;
+      confirmCallback = callback;
+      confirmOverlay.style.display = 'flex';
+    }
+
+    function hideConfirm(){
+      confirmOverlay.style.display = 'none';
+      confirmCallback = null;
+    }
+
+    confirmYes.addEventListener('click', () => {
+      if(confirmCallback) confirmCallback();
+      hideConfirm();
+    });
+
+    confirmCancel.addEventListener('click', hideConfirm);
+    modalCloseBtn.addEventListener('click', hideConfirm);
+    
+    // Click outside modal to close
+    confirmOverlay.addEventListener('click', (e) => {
+      if(e.target === confirmOverlay) hideConfirm();
+    });
+
+    // Delete customer handler (registered customers only)
+    document.querySelectorAll('.order-item .btn-delete-customer').forEach(btn=>{
+      btn.addEventListener('click', async (e)=>{
+        const uid = btn.getAttribute('data-user-id');
+        if (!uid) { 
+          showConfirm('Cannot Delete', 'Only registered customers can be deleted.', () => {});
+          return; 
+        }
+        const card = btn.closest('.order-item');
+        
+        showConfirm(
+          'Delete Customer?',
+          'Delete this customer? Orders will remain but be detached from the user account.',
+          async () => {
+            btn.disabled = true;
+            try{
+              const res = await fetch('/api/customers/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: uid }) });
+              const data = await res.json();
+              if(!data.ok){ 
+                showConfirm('Error', data.error || 'Delete failed', () => {});
+                btn.disabled = false; 
+                return; 
+              }
+              if(card) card.remove();
+            }catch(err){
+              showConfirm('Error', err && err.message || 'Delete failed', () => {});
+              btn.disabled = false;
+            }
+          }
+        );
+      });
+    });
+  })();
+
+  // Auto-submit customers filters like products/orders
+  (function(){
+    const form = document.getElementById('customers-filter-form');
+    if(!form) return;
+    form.querySelectorAll('select,input[type=number]').forEach(el=>{
+      el.addEventListener('change', ()=> form.submit());
+    });
+    const q = document.querySelector('input[name="q"][form="customers-filter-form"]');
+    if(q) q.addEventListener('keydown', e=>{ if(e.key==='Enter'){ form.submit(); }});
+  })();
+
+  (function(){
+    const overlay = document.getElementById('disc-modal-overlay');
+    const closeBtn = document.getElementById('disc-close');
+    const cancelBtn = document.getElementById('disc-cancel');
+    const form = document.getElementById('disc-form');
+    const userIdEl = document.getElementById('disc-user-id');
+    const valueEl = document.getElementById('disc-value');
+    const titleEl = document.getElementById('disc-title');
+
+    function open(){ overlay.style.display='flex'; }
+    function close(){ overlay.style.display='none'; form.reset(); }
+
+    if(closeBtn) closeBtn.addEventListener('click', close);
+    if(cancelBtn) cancelBtn.addEventListener('click', close);
+    if(overlay) overlay.addEventListener('click', (e)=>{ if(e.target===overlay) close(); });
+
+    document.querySelectorAll('.btn-open-discount').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const uid = btn.getAttribute('data-user-id');
+        const name = btn.getAttribute('data-name')||'';
+        const disc = btn.getAttribute('data-discount')||'';
+        userIdEl.value = uid||'';
+        valueEl.value = disc!=='' ? disc : '';
+        titleEl.textContent = `Set Discount for ${name||('User #'+uid)}`;
+        open();
+      });
+    });
+
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const uid = userIdEl.value;
+      const val = valueEl.value;
+      if(!uid){ showConfirm('Error', 'Missing user id', () => {}); return; }
+      try{
+        const res = await fetch('/api/customers/discount', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: uid, discount: val }) });
+        const data = await res.json();
+        if(!data.ok){ showConfirm('Error', data.error || 'Failed to save', () => {}); return; }
+        close();
+        location.reload();
+      }catch(err){
+        showConfirm('Error', err && err.message || 'Failed to save', () => {});
+      }
+    });
+  })();
+
+  // Email Modal Handler
+  (function(){
+    console.log('🔥 Email Modal Handler Initializing...');
+    
+    const emailOverlay = document.getElementById('email-modal-overlay');
+    const emailCloseBtn = document.getElementById('email-modal-close');
+    const emailCancelBtn = document.getElementById('email-cancel');
+    const emailForm = document.getElementById('email-form');
+    const emailToField = document.getElementById('email-to');
+    const emailCustomerEmail = document.getElementById('email-customer-email');
+    const emailCustomerName = document.getElementById('email-customer-name');
+    const emailSubject = document.getElementById('email-subject');
+    const emailMessage = document.getElementById('email-message');
+    const emailSendBtn = document.getElementById('email-send');
+    const confirmOverlay = document.getElementById('confirm-overlay');
+    const confirmTitle = document.getElementById('confirm-title');
+    const confirmMessage = document.getElementById('confirm-message');
+    
+    console.log('Email Overlay Element:', emailOverlay);
+    console.log('Email Form Element:', emailForm);
+    
+    if(!emailOverlay || !emailForm){
+      console.error('❌ Email modal elements not found!');
+      return;
+    }
+    
+    function openEmailModal(){ 
+      console.log('📧 Opening email modal...');
+      emailOverlay.style.display='flex'; 
+      console.log('Modal display set to flex');
+    }
+    
+    function closeEmailModal(){ 
+      console.log('Closing email modal...');
+      emailOverlay.style.display='none'; 
+      if(emailForm) emailForm.reset(); 
+    }
+
+    function showConfirmModal(title, message){
+      if(confirmTitle) confirmTitle.textContent = title;
+      if(confirmMessage) confirmMessage.textContent = message;
+      if(confirmOverlay) confirmOverlay.style.display = 'flex';
+    }
+
+    if(emailCloseBtn) emailCloseBtn.addEventListener('click', closeEmailModal);
+    if(emailCancelBtn) emailCancelBtn.addEventListener('click', closeEmailModal);
+    if(emailOverlay) emailOverlay.addEventListener('click', (e)=>{ 
+      if(e.target === emailOverlay) closeEmailModal(); 
+    });
+
+    // Wire up all email buttons
+    const emailButtons = document.querySelectorAll('.btn-email-customer');
+    console.log('Found', emailButtons.length, 'email buttons');
+    
+    emailButtons.forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        console.log('📧 Email button clicked!');
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const email = btn.getAttribute('data-email');
+        const name = btn.getAttribute('data-name') || 'Customer';
+        
+        console.log('Customer email:', email);
+        console.log('Customer name:', name);
+        
+        if(!email){
+          showFlash('This customer does not have an email address on file.', 'error');
+          return;
+        }
+        
+        emailCustomerEmail.value = email;
+        emailCustomerName.value = name;
+        emailToField.value = `${name} <${email}>`;
+        emailSubject.value = '';
+        emailMessage.value = '';
+        openEmailModal();
+      });
+    });
+    
+    console.log('✅ Email modal handler initialized successfully');
+
+    // Handle form submission
+    emailForm.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      
+      const customerEmail = emailCustomerEmail.value;
+      const customerName = emailCustomerName.value;
+      const subject = emailSubject.value.trim();
+      const message = emailMessage.value.trim();
+      
+      if(!subject || !message){
+        showConfirmModal('Missing Fields', 'Please fill in both subject and message.');
+        return;
+      }
+      
+      // Disable send button
+      emailSendBtn.disabled = true;
+      emailSendBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Sending...';
+      
+      try{
+        const res = await fetch('/api/customers/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customer_email: customerEmail,
+            customer_name: customerName,
+            subject: subject,
+            message: message
+          })
+        });
+        
+        const data = await res.json();
+        
+        if(!data.ok){
+          showConfirmModal('Error', data.error || 'Failed to send email');
+          emailSendBtn.disabled = false;
+          emailSendBtn.innerHTML = '<i class="fa fa-paper-plane"></i> Send Email';
+          return;
+        }
+        
+        // Success!
+        closeEmailModal();
+        showConfirmModal('Success', `Email sent successfully to ${customerName}!`);
+        
+      }catch(err){
+        showConfirmModal('Error', err.message || 'Failed to send email');
+      } finally {
+        emailSendBtn.disabled = false;
+        emailSendBtn.innerHTML = '<i class="fa fa-paper-plane"></i> Send Email';
+      }
+    });
+  })();
+  </script>
+{% endblock %}

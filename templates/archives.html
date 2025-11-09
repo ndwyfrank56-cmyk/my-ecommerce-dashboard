@@ -1,0 +1,388 @@
+{% extends 'base.html' %}
+
+{% block title %}Archives - Delivered Orders{% endblock title %}
+
+{% block content %}
+<section class="orders-page">
+  <div class="orders-header d-flex align-items-center justify-content-between mb-3">
+    <h1 class="h5 m-0">Archives - Delivered & Cancelled Orders</h1>
+    <div class="d-flex gap-2">
+      <a href="/orders" class="btn-refresh" style="text-decoration: none;"><i class="fa-solid fa-arrow-left"></i> Back to Orders</a>
+      <button class="btn-refresh" onclick="location.reload()"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+    </div>
+  </div>
+
+  <!-- Reusable Modal -->
+  <div id="modal-overlay" class="x-modal-overlay">
+    <div class="x-modal">
+      <div class="x-modal-header">
+        <div class="x-modal-title" id="modal-title">Details</div>
+        <button class="x-modal-close" id="modal-close">✕</button>
+      </div>
+      <div class="x-modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Leaflet for map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function(){
+      const overlay = document.getElementById('modal-overlay');
+      const body = document.getElementById('modal-body');
+      const title = document.getElementById('modal-title');
+      const closeBtn = document.getElementById('modal-close');
+
+      function openModal(t, html){
+        title.textContent = t || 'Details';
+        body.innerHTML = html || '';
+        overlay.style.display = 'flex';
+      }
+      function closeModal(){ overlay.style.display = 'none'; body.innerHTML=''; }
+      closeBtn.addEventListener('click', closeModal);
+
+      // Receipt/List handler
+      document.querySelectorAll('.btn-list').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const oid = btn.dataset.oid;
+          openModal(`Order ${oid} • Items`, '<p class="loading">Loading items…</p>');
+          try {
+            const res = await fetch(`/api/orders/${oid}/items`);
+            const data = await res.json();
+            if(!data.ok) { openModal('Order Items', `<p style="color:#ef4444;">${data.error||'Failed to load items'}</p>`); return; }
+            const rows = (data.items||[]).map(it => {
+              const price = Number(it.price||0);
+              const qty = Number(it.qty||0);
+              const finalPrice = Number(it.final_price != null ? it.final_price : price);
+              const prodPct = Number(it.product_discount_percent || 0);
+              const prodAmt = Number(it.product_discount_amount || 0);
+              const itemPct = Number(it.discount_percent || 0);
+              const itemAmt = Number(it.discount || 0);
+              const pct = prodPct || itemPct || 0;
+              const amt = prodAmt || itemAmt || 0;
+              const hasDisc = (pct > 0) || (amt > 0) || (finalPrice < price);
+              const saved = Math.max((price - finalPrice) * qty, 0);
+              const badge = hasDisc ? `<span style="margin-left:8px; font-size:12px; color:#dc2626; background:rgba(220,38,38,.08); padding:2px 6px; border-radius:10px;">-${pct ? pct+ '%' : amt.toLocaleString()}</span>` : '';
+              const variations = it.variations ? `<span style="font-size:14px; color:#1e293b; font-weight:600; margin-left:8px; background:#93c5fd; padding:4px 10px; border-radius:6px; display:inline-block;">${it.variations}</span>` : '';
+              const priceHtml = hasDisc
+                ? `<div><span style="text-decoration:line-through; opacity:.6;">${price.toLocaleString()}</span> <span style="font-weight:600; margin-left:6px;">${finalPrice.toLocaleString()}</span> × ${qty}</div>`
+                : `${price.toLocaleString()} × ${qty}`;
+              const savedHtml = hasDisc && saved > 0 ? `<div style="font-size:12px; color:#16a34a;">saved ${saved.toLocaleString()}</div>` : '';
+              return `
+                <tr>
+                  <td><span style="font-size:15px; font-weight:700; color:#1e293b;">${it.name}</span>${badge}${variations}</td>
+                  <td style="text-align:right;">${priceHtml}</td>
+                  <td style="text-align:right; font-weight:600;">${Number(it.subtotal||finalPrice*qty).toLocaleString()}${savedHtml}</td>
+                </tr>
+              `;
+            }).join('');
+            const subtotal = Number(data.order.subtotal ?? 0);
+            const originalSum = (data.items||[]).reduce((s,it)=> s + Number(it.price||0) * Number(it.qty||0), 0);
+            const savings = Math.max(originalSum - subtotal, 0);
+            const savedRow = savings > 0 ? `<tr><td colspan="2" style="text-align:right; color:#16a34a;">You saved</td><td style="text-align:right; color:#16a34a;">${savings.toLocaleString()}</td></tr>` : '';
+            const html = `
+              <div style="margin-bottom:10px; color: var(--text-muted);">${data.order.full_name}, ${data.order.date}, ${data.order.status}</div>
+              <table class="receipt">
+                <thead>
+                  <tr><th>Item</th><th style="text-align:right;">Price x Qty</th><th style="text-align:right;">Subtotal</th></tr>
+                </thead>
+                <tbody>${rows || '<tr><td colspan="3" style="text-align:center; padding:16px;">No items</td></tr>'}</tbody>
+                <tfoot>
+                  ${savedRow}
+                  <tr><td colspan="2" style="text-align:right; font-weight:700; font-size:16px;">TOTAL</td><td style="text-align:right; font-weight:700; font-size:16px;">${subtotal.toLocaleString()}</td></tr>
+                </tfoot>
+              </table>`;
+            openModal(`Order ${oid}, Items`, html);
+          } catch(err){ openModal('Order Items', `<p style="color:#ef4444;">${err}</p>`); }
+        });
+      });
+
+      // Map handler using Leaflet
+      document.querySelectorAll('.btn-map').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const oid = btn.dataset.oid;
+          openModal(`Order ${oid} • Location`, '<p class="loading">Loading map…</p>');
+          try {
+            const res = await fetch(`/api/orders/${oid}/location`);
+            const data = await res.json();
+            if(!data.ok) { openModal('Location', `<p style="color:#ef4444;">${data.error||'Failed to load location'}</p>`); return; }
+            const lat = data.order.lat, lon = data.order.lon;
+            if(lat == null || lon == null){
+              const addrParts = [data.order.address || '', data.order.city || ''].filter(Boolean);
+              const addr = addrParts.join(', ');
+              if (addr) {
+                const html = `<div style="padding:12px; line-height:1.5;"><div style="font-weight:600; margin-bottom:6px;">Address</div><div>${addr}</div><div style="margin-top:8px; font-size:12px; color:#6b7280;">No live map available.</div></div>`;
+                openModal(`Order ${oid}, Location`, html);
+              } else {
+                openModal('Location', `<p style="color:#ef4444;">No location saved for this order.</p>`);
+              }
+              return;
+            }
+            const mapId = 'map_'+Date.now();
+            const html = `<div style="height: 60vh; border-radius: 8px; overflow: hidden;"><div id="${mapId}" style="height:100%;"></div></div>`;
+            openModal(`Order ${oid}, Location`, html);
+            setTimeout(() => {
+              const map = L.map(mapId).setView([lat, lon], 15);
+              L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap'}).addTo(map);
+              L.marker([lat, lon]).addTo(map).bindPopup(`${data.order.full_name}<br>${data.order.address||''} ${data.order.city||''}`);
+            }, 0);
+          } catch(err){ openModal('Location', `<p style=\"color:#ef4444;\">${err}</p>`); }
+        });
+      });
+    });
+  </script>
+
+  <style>
+    /* Modern Date Picker Styling */
+    .modern-date-picker {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px 10px 40px;
+      color: var(--text-primary);
+      font-size: 14px;
+      width: 100%;
+    }
+    .date-picker-container {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .date-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .relative {
+      position: relative;
+    }
+    .absolute {
+      position: absolute;
+    }
+    .inset-y-0 {
+      top: 0;
+      bottom: 0;
+    }
+    .start-0 {
+      left: 0;
+    }
+    .flex {
+      display: flex;
+    }
+    .items-center {
+      align-items: center;
+    }
+    .ps-3 {
+      padding-left: 12px;
+    }
+    .pointer-events-none {
+      pointer-events: none;
+    }
+    .text-gray-400 {
+      color: rgba(255,255,255,0.4);
+    }
+    .w-4 {
+      width: 16px;
+    }
+    .h-4 {
+      height: 16px;
+    }
+  </style>
+
+  <!-- Stats row for archives -->
+  <div class="stats-grid">
+    <div class="stat-card stat-total">
+      <div class="stat-icon" style="background: rgba(59,130,246,0.15); color:#3b82f6;"><i class="fa-solid fa-box-archive"></i></div>
+      <div class="stat-content">
+        <div class="stat-number">{{ stats.total_archived or 0 }}</div>
+        <div class="stat-label">Total Archived</div>
+      </div>
+    </div>
+    <div class="stat-card stat-delivered">
+      <div class="stat-icon" style="background: rgba(16,185,129,0.15); color:#10b981;"><i class="fa-solid fa-circle-check"></i></div>
+      <div class="stat-content">
+        <div class="stat-number">{{ stats.delivered_count or 0 }}</div>
+        <div class="stat-label">Delivered</div>
+      </div>
+    </div>
+    <div class="stat-card stat-pending">
+      <div class="stat-icon" style="background: rgba(239,68,68,0.15); color:#ef4444;"><i class="fa-solid fa-ban"></i></div>
+      <div class="stat-content">
+        <div class="stat-number">{{ stats.cancelled_count or 0 }}</div>
+        <div class="stat-label">Cancelled</div>
+      </div>
+    </div>
+    <div class="stat-card stat-revenue">
+      <div class="stat-icon" style="background: rgba(139,92,246,0.15); color:#8b5cf6;"><i class="fa-solid fa-coins"></i></div>
+      <div class="stat-content">
+        <div class="stat-number">{{ stats.total_revenue or 'RWF 0' }}</div>
+        <div class="stat-label">Delivered Revenue</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search -->
+  <div class="controls-section">
+    <div class="search-box">
+      <i class="fa fa-search"></i>
+      <input type="text" name="q" value="{{ filters.q }}" placeholder="Search by order ID or customer..." form="archives-filter-form" />
+    </div>
+  </div>
+
+  <form id="archives-filter-form" class="filters-row" method="get">
+    <div class="date-inputs-wrapper">
+      <div class="date-picker-container">
+        <label class="date-label">From</label>
+        <div class="relative">
+          <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
+            <svg class="w-4 h-4 text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M20 4a2 2 0 0 0-2-2h-2V1a1 1 0 0 0-2 0v1h-3V1a1 1 0 0 0-2 0v1H6V1a1 1 0 0 0-2 0v1H2a2 2 0 0 0-2 2v2h20V4ZM0 18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8H0v10Zm5-8h10a1 1 0 0 1 0 2H5a1 1 0 0 1 0-2Z"/>
+            </svg>
+          </div>
+          <input type="date" name="from" value="{{ filters['from'] }}" class="modern-date-picker" placeholder="Select date">
+        </div>
+      </div>
+      <div class="date-picker-container">
+        <label class="date-label">To</label>
+        <div class="relative">
+          <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
+            <svg class="w-4 h-4 text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M20 4a2 2 0 0 0-2-2h-2V1a1 1 0 0 0-2 0v1h-3V1a1 1 0 0 0-2 0v1H6V1a1 1 0 0 0-2 0v1H2a2 2 0 0 0-2 2v2h20V4ZM0 18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8H0v10Zm5-8h10a1 1 0 0 1 0 2H5a1 1 0 0 1 0-2Z"/>
+            </svg>
+          </div>
+          <input type="date" name="to" value="{{ filters['to'] }}" class="modern-date-picker" placeholder="Select date">
+        </div>
+      </div>
+    </div>
+
+    <select name="sort" class="filter-select">
+      <option value="newest" {% if filters.sort=='newest' %}selected{% endif %}>Newest First</option>
+      <option value="oldest" {% if filters.sort=='oldest' %}selected{% endif %}>Oldest First</option>
+    </select>
+  </form>
+
+  <!-- Orders Cards Grid -->
+  <div class="orders-container">
+    <div class="orders-row">
+      {% for o in orders %}
+      {% set d = (o.delivered or '')|lower %}
+      <div class="order-item">
+        <div class="order-top">
+          <h4>{{ o.code or 'ORD-49' }}</h4>
+          {% if d == 'yes' or d == 'y' or d == 'true' or d == '1' %}
+          <span class="status-badge status-delivered">✓ DELIVERED</span>
+          {% elif d == 'false' %}
+          <span class="status-badge status-cancelled">✕ CANCELLED</span>
+          {% else %}
+          <span class="status-badge status-notdelivered">ARCHIVED</span>
+          {% endif %}
+        </div>
+
+        <div class="order-actions">
+          <button class="icon-btn btn-list" data-oid="{{ o.id }}" title="View items"><i class="fa fa-list"></i></button>
+          <button class="icon-btn btn-map" data-oid="{{ o.id }}" title="View location"><i class="fa-solid fa-location-dot"></i></button>
+        </div>
+        
+        <div class="customer-name">{{ o.customer or '—' }}</div>
+        
+        <div class="order-info">
+          <div class="info-row">
+            <span>Provider:</span> {{ o.provider or '—' }}
+          </div>
+          <div class="info-row">
+            <span>Phone:</span> {{ o.phone or '—' }}
+          </div>
+          <div class="info-row">
+            <span>Date:</span> {{ o.date or '—' }}
+          </div>
+          <div class="info-row">
+            <span>Payment:</span> 
+            {% set payment_status = (o.payment_status or 'pending')|lower %}
+            {% if payment_status == 'paid' %}
+            <span style="color: #10b981; font-weight: 600;">✓ PAID</span>
+            {% elif payment_status == 'cancelled' %}
+            <span style="color: #ef4444; font-weight: 600;">✕ CANCELLED</span>
+            {% else %}
+            <span style="color: #f59e0b; font-weight: 600;">PENDING</span>
+            {% endif %}
+          </div>
+          {% if o.notes %}
+          <div class="info-row">
+            <span>Notes:</span> {{ o.notes }}
+          </div>
+          {% endif %}
+        </div>
+        
+        <div class="order-total">
+          RWF {{ "{:,.0f}".format(o.total|float) if o.total else "0" }}
+        </div>
+        
+        <div style="padding: 12px 0; text-align: center; color: rgba(255,255,255,0.5); font-size: 13px; font-weight: 500;">
+          <i class="fa-solid fa-box-archive"></i> Archived Order
+        </div>
+      </div>
+      {% else %}
+      <!-- No orders found message -->
+      <div class="no-orders-message">
+        <div class="no-orders-icon">
+          <i class="fa-solid fa-box-archive"></i>
+        </div>
+        <h3>No archived orders found</h3>
+        <p>No delivered or cancelled orders match your current filter criteria. Try adjusting your filters or date range.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  {% if pagination and pagination.pages > 1 %}
+  <div style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 20px; padding: 16px 0;">
+    {% set base = '?q=' ~ (filters.q or '') ~ '&from=' ~ (filters['from'] or '') ~ '&to=' ~ (filters['to'] or '') ~ '&sort=' ~ (filters.sort or '') %}
+    
+    <a href="{{ base }}&page=1" class="pagination-btn" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #9ca3af; text-decoration: none; font-size: 13px;">
+      ← First
+    </a>
+    
+    {% if pagination.page > 1 %}
+    <a href="{{ base }}&page={{ pagination.page - 1 }}" class="pagination-btn" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #9ca3af; text-decoration: none; font-size: 13px;">
+      ← Previous
+    </a>
+    {% endif %}
+    
+    <span style="color: #e2e8f0; font-size: 13px; font-weight: 600;">
+      Page {{ pagination.page }} of {{ pagination.pages }}
+    </span>
+    
+    {% if pagination.page < pagination.pages %}
+    <a href="{{ base }}&page={{ pagination.page + 1 }}" class="pagination-btn" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #9ca3af; text-decoration: none; font-size: 13px;">
+      Next →
+    </a>
+    {% endif %}
+    
+    <a href="{{ base }}&page={{ pagination.pages }}" class="pagination-btn" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #9ca3af; text-decoration: none; font-size: 13px;">
+      Last →
+    </a>
+  </div>
+  <style>
+    .pagination-btn:hover { background: rgba(255,255,255,0.1) !important; color: #e2e8f0 !important; }
+  </style>
+  {% endif %}
+
+  <script>
+    (function() {
+      const form = document.getElementById('archives-filter-form');
+      if (!form) return;
+      
+      // Handle form elements
+      form.querySelectorAll('select,input[type=date]').forEach(el => {
+        el.addEventListener('change', () => form.submit());
+      });
+      const q = document.querySelector('input[name="q"][form="archives-filter-form"]');
+      if (q) q.addEventListener('keydown', (e) => { if (e.key === 'Enter') form.submit(); });
+    })();
+  </script>
+</section>
+{% endblock %}

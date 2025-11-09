@@ -1,0 +1,1195 @@
+{% extends 'base.html' %}
+
+{% block title %}Users Management{% endblock title %}
+
+{% block content %}
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+  
+  .workers-container {
+    padding: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Header Section - Match Reports */
+  .header-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    gap: 16px;
+  }
+  
+  .header-left {
+    flex: 0 1 auto;
+  }
+  
+  .page-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #e2e8f0;
+    letter-spacing: 0;
+    line-height: 1.2;
+    margin: 0;
+  }
+  
+  .header-right {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  
+  /* Add User Button - Clean Modern Style */
+  .header-right .action-btn { 
+    display: inline-flex; 
+    align-items: center; 
+    gap: 8px; 
+    height: 40px; 
+    padding: 0 18px; 
+    border-radius: 10px; 
+    border: none; 
+    background: rgba(255,255,255,0.08); 
+    color: rgba(255,255,255,0.9); 
+    font-weight: 500; 
+    font-size: 14px;
+    cursor: pointer;
+    transition: none;
+  }
+  .header-right .action-btn i { 
+    font-size: 14px; 
+    opacity: 0.8;
+  }
+  .header-right .action-btn span { 
+    display: inline-block;
+    font-weight: 500;
+  }
+  .header-right .action-btn.action-primary { 
+    background: rgba(255,255,255,0.08); 
+    border: none; 
+    color: rgba(255,255,255,0.9); 
+  }
+  @media (max-width: 640px) { 
+    .header-right .action-btn span { display: none; } 
+    .header-right .action-btn { padding: 0 12px; } 
+  }
+  
+  /* Floating Add User Button (FAB) */
+  .fab-add{
+    position: fixed;
+    right: 22px;
+    bottom: 22px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #10b981;
+    color: #0b1220;
+    border: none;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+    cursor: pointer;
+    z-index: 1000;
+    transition: none;
+  }
+  .fab-add i{ font-size: 18px; }
+  @media (max-width: 480px){ .fab-add{ width: 52px; height: 52px; right: 16px; bottom: 16px; } }
+  
+  /* Search Controls */
+  .controls-section {
+    margin-bottom: 20px;
+  }
+  
+  .search-box {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+  }
+  
+  .search-box i {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+  
+  .search-box input {
+    width: 100%;
+    padding: 12px 14px 12px 42px;
+    background: var(--surface);
+    border: none;
+    border-radius: 10px;
+    color: var(--text-primary);
+    font-size: 14px;
+  }
+  
+  .search-box input:focus {
+    outline: none;
+  }
+  
+  @media (max-width: 768px) {
+    .search-box {
+      max-width: 100%;
+    }
+  }
+  
+  /* Order/Customer Card Styles */
+  .orders-container {
+    margin-bottom: 20px;
+  }
+  
+  .orders-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+  }
+  
+  /* Tablet and medium screens */
+  @media (max-width: 1200px) {
+    .orders-row {
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 14px;
+    }
+  }
+  
+  /* Small tablets */
+  @media (max-width: 992px) {
+    .header-section {
+      margin-bottom: 0.75rem;
+    }
+  }
+  
+  /* Tablet - 2 columns */
+  @media (min-width: 601px) and (max-width: 992px) {
+    .orders-row {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+  }
+  
+  /* Mobile landscape */
+  @media (max-width: 768px) {
+    .order-item {
+      padding: 14px;
+    }
+    .header-right .action-btn span {
+      display: inline-block;
+    }
+  }
+  
+  /* Mobile portrait - 2 columns (iPhone SE, all phones) */
+  @media (max-width: 600px) {
+    .orders-row {
+      grid-template-columns: repeat(2, 1fr) !important;
+      gap: 8px;
+    }
+    
+    .order-actions {
+      position: relative;
+      top: 0;
+      right: 0;
+      margin-bottom: 12px;
+    }
+    .icon-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+    }
+    .icon-btn i {
+      font-size: 16px;
+    }
+    /* Allow text wrapping in info rows on mobile */
+    .info-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+    }
+    .info-row span:last-child {
+      white-space: normal;
+      word-break: break-word;
+      text-align: left;
+    }
+    /* Stack buttons vertically on mobile */
+    .order-buttons { 
+      flex-direction: column !important; 
+      gap: 8px; 
+    }
+    
+    .order-item { 
+      padding: 14px; 
+    }
+    
+    .header-section { 
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+      justify-content: space-between;
+    }
+    
+    .header-right { 
+      justify-content: flex-end;
+    }
+  }
+  
+  /* Very small screens */
+  @media (max-width: 480px) {
+    .orders-row { 
+      gap: 8px; 
+    }
+    .order-item { padding: 12px; }
+    .order-top h4 { font-size: 14px; }
+    .order-info { font-size: 12px; }
+    .order-buttons { 
+      gap: 6px; 
+    }
+    .icon-btn { width: 40px; height: 40px; }
+    .header-right .action-btn { 
+      height: 38px; 
+      padding: 0 12px; 
+    }
+    .page-title {
+      font-size: 18px;
+    }
+  }
+  
+  .order-item {
+    background: var(--surface);
+    border: none;
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .order-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  
+  .order-top h4 {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+  }
+  
+  .order-actions {
+    display: flex;
+    gap: 8px;
+  }
+  
+  .order-item {
+    position: relative;
+  }
+  
+  
+  .customer-name {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+  
+  .order-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+  }
+  
+  .info-row span:first-child {
+    color: var(--text-muted);
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+  
+  .info-row span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    text-align: right;
+  }
+  
+  .order-total {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+    padding-top: 12px;
+    border-top: none;
+  }
+  
+  .order-buttons {
+    display: flex;
+    gap: 8px;
+  }
+  
+  .order-buttons .btn-assign,
+  .order-buttons .btn-print {
+    flex: 1;
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: none;
+  }
+  
+  .no-orders-message {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+  }
+  
+  .no-orders-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.3;
+  }
+  
+  .no-orders-message h3 {
+    font-size: 18px;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+  }
+  
+  .no-orders-message p {
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+  
+  .badge {
+    display: inline-block;
+    padding: 0.3rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+  
+  .badge-admin {
+    background: rgba(139, 92, 246, 0.15);
+    color: #a78bfa;
+    border: 1px solid rgba(139, 92, 246, 0.3);
+  }
+  
+  .badge-manager {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+  }
+  
+  .badge-staff {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+  }
+  
+  /* Icon buttons (key, email, etc.) */
+  .icon-btn {
+    background: rgba(255, 255, 255, 0.95);
+    border: none;
+    color: #1a1a1a;
+    border-radius: 12px;
+    width: 48px;
+    height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: none;
+    text-decoration: none;
+  }
+  .icon-btn i {
+    font-size: 18px;
+  }
+  
+  /* Delete icon button (subtle outline) - matches reviews */
+  .review-delete { 
+    background: transparent; 
+    border: 1px solid var(--border); 
+    color: #e57373; 
+    border-radius: 10px; 
+    width: 28px; 
+    height: 28px; 
+    display: inline-flex; 
+    align-items: center; 
+    justify-content: center; 
+    cursor: pointer; 
+    box-shadow: none;
+  }
+  
+  /* Confirmation Modal Styles */
+  .confirm-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    backdrop-filter: blur(8px);
+    animation: fadeIn 0.2s ease;
+  }
+  .confirm-modal {
+    background: rgba(30,30,35,0.98);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 32px 40px;
+    max-width: 420px;
+    width: 90%;
+    box-shadow: 0 25px 70px rgba(0,0,0,0.8);
+    text-align: center;
+    animation: slideUp 0.3s ease;
+  }
+  .confirm-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 12px;
+    margin-top: 0;
+  }
+  .confirm-message {
+    font-size: 14px;
+    color: rgba(255,255,255,0.6);
+    margin-bottom: 28px;
+    line-height: 1.6;
+  }
+  .confirm-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+  }
+  .confirm-btn {
+    padding: 12px 28px;
+    border-radius: 8px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .confirm-cancel {
+    background: rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.5);
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .confirm-cancel:hover {
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.7);
+  }
+  .confirm-yes {
+    background: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.9);
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  .confirm-yes:hover:not(:disabled) {
+    background: rgba(255,255,255,0.18);
+    color: #ffffff;
+  }
+  .confirm-yes:disabled {
+    opacity: 0.6 !important;
+    cursor: not-allowed !important;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  
+  /* Modal Styles - Match Products */
+  .x-modal-overlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(3px);
+    background: rgba(0,0,0,0.6);
+    z-index: 1000;
+  }
+  
+  .x-modal-overlay.active {
+    display: flex;
+  }
+  
+  .x-modal {
+    max-width: 650px;
+    width: 95vw;
+    max-height: 95vh;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+    margin: 10px;
+  }
+  
+  .x-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .x-modal-title {
+    font-weight: 600;
+    font-size: 18px;
+    color: var(--text-primary);
+  }
+  
+  .x-modal-close {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+  }
+  
+  
+  .x-modal-body {
+    padding: 20px;
+    background: var(--surface);
+    overflow-y: auto;
+    max-height: calc(95vh - 80px);
+  }
+  
+  .x-modal-body form {
+    display: grid;
+    gap: 8px;
+  }
+  
+  .form-group {
+    display: grid;
+    gap: 4px;
+  }
+  
+  .form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 8px;
+    letter-spacing: 0.2px;
+  }
+  
+  .form-group input {
+    width: 100%;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.95);
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 0;
+    padding: 10px 0;
+    font-size: 14px;
+    transition: all 0.2s ease;
+  }
+  
+  .form-group input::placeholder {
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 13px;
+  }
+  
+  .form-group input:focus {
+    border-bottom-color: rgba(255, 255, 255, 0.4);
+    background: transparent;
+    outline: none;
+  }
+  
+  .form-group select {
+    width: 100%;
+    padding: 10px 0;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.95);
+    border-radius: 0;
+    font-size: 14px;
+    transition: all 0.2s ease;
+  }
+  
+  .form-group select:focus {
+    outline: none;
+    border-bottom-color: rgba(255, 255, 255, 0.4);
+  }
+  
+  .form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    padding-top: 4px;
+  }
+  
+  .form-actions button {
+    flex: 1;
+    min-width: 120px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  
+  .btn-cancel {
+    background: rgba(255,255,255,0.7);
+    border: 1px solid var(--border);
+    color: #1f2937;
+  }
+  
+  .btn-submit {
+    background: rgba(255,255,255,0.8);
+    border: none;
+    color: #1f2937;
+  }
+  
+  /* Checkbox styling */
+  .perm-check {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #047857;
+  }
+  
+  /* Remove hover effects on permission labels */
+  label[style*="cursor: pointer"]:hover {
+    background: rgba(255,255,255,0.03) !important;
+    border-color: var(--border) !important;
+    transform: none !important;
+  }
+</style>
+
+<div class="workers-container">
+  <!-- Header Section -->
+  <div class="header-section">
+    <div class="header-left">
+        <h1 class="page-title">USR - Users</h1>
+    </div>
+    <div class="header-right" style="gap: 12px;">
+      <button class="btn-refresh" onclick="location.reload()"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+      <button class="action-btn action-primary" onclick="openAddModal()">
+        <i class="fa fa-plus"></i>
+        <span>Add User</span>
+      </button>
+    </div>
+  </div>
+  
+  <!-- Search Section -->
+  <div class="controls-section">
+    <div class="search-box">
+      <i class="fa fa-search"></i>
+      <input type="text" id="searchInput" placeholder="Search by name, email or phone..." onkeyup="filterTable()">
+    </div>
+  </div>
+  
+  <div class="orders-container">
+    <div class="orders-row">
+      {% if workers and workers|length > 0 %}
+        {% for worker in workers %}
+        <div class="order-item">
+          <div class="order-top">
+            <h4>{{ worker[1] }}</h4>
+            <span class="status-badge {{ 'status-delivered' if worker[8] == 1 else 'status-pending' }}">{{ 'Registered' if worker[8] == 1 else 'Not Registered' }}</span>
+          </div>
+
+          <div class="order-actions">
+            <button class="icon-btn" onclick="managePermissions({{ worker[0] }})" title="Set Permissions"><i class="fa fa-key"></i></button>
+            <button class="icon-btn" onclick="openEmailModal({{ worker[0] }}, '{{ worker[1] }}', '{{ worker[3] }}')" title="Send Email"><i class="fa fa-envelope"></i></button>
+          </div>
+
+          <div class="order-info">
+            <div class="info-row"><span>Profession:</span> {{ worker[5] or 'N/A' }}</div>
+            <div class="info-row"><span>Phone:</span> {{ worker[2] }}</div>
+            <div class="info-row"><span>Created:</span> {{ worker[7].strftime('%Y-%m-%d') if worker[7] else 'N/A' }}</div>
+          </div>
+
+          <div class="order-buttons">
+            <button class="btn-assign" onclick="editWorker({{ worker[0] }})">Edit User</button>
+            {% if worker[8] == 1 %}
+            <button class="btn-print" onclick="resetLogin({{ worker[0] }})" style="background: #047857; border-color: #047857;" title="Delete login credentials so they can register again">Reset Login</button>
+            {% else %}
+            <button class="btn-print" onclick="deleteWorker({{ worker[0] }})">Delete</button>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="no-orders-message">
+          <div class="no-orders-icon">
+            <i class="fa fa-users"></i>
+          </div>
+          <h3>No users found</h3>
+          <p>Add your first user to get started.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Confirmation Modal (for deletes/actions) -->
+<div id="confirm-overlay" class="confirm-overlay" style="display:none;">
+  <div class="confirm-modal">
+    <h3 class="confirm-title" id="confirm-title">Are you sure?</h3>
+    <p class="confirm-message" id="confirm-message">This action cannot be undone.</p>
+    <div class="confirm-buttons">
+      <button class="confirm-btn confirm-cancel" id="confirm-cancel">Cancel</button>
+      <button class="confirm-btn confirm-yes" id="confirm-yes">Yes, Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- Permissions Modal -->
+<div id="permissionsModal" class="x-modal-overlay">
+  <div class="x-modal">
+    <div class="x-modal-header">
+      <div class="x-modal-title"><i class="fa fa-key"></i> Manage Page Permissions</div>
+      <button class="x-modal-close" onclick="closePermissionsModal()">✕</button>
+    </div>
+    <div class="x-modal-body">
+      <form id="permissionsForm" onsubmit="savePermissions(event)">
+        <input type="hidden" id="permWorker" name="worker_id">
+        
+        <div style="margin-bottom: 16px; color: var(--text-muted); font-size: 13px;">
+          Select the pages this user can access:
+        </div>
+        
+        <div style="display: grid; gap: 6px;">
+          <label style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 6px; cursor: pointer;">
+            <input type="checkbox" name="pages" value="dashboard" class="perm-check">
+            <span style=" font-weight: 500;">Dashboard</span>
+          </label>
+          
+          <label style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 6px; cursor: pointer;">
+            <input type="checkbox" name="pages" value="orders" class="perm-check">
+            <span style="font-weight: 500;">Orders</span>
+          </label>
+          
+          <label style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 6px; cursor: pointer;">
+            <input type="checkbox" name="pages" value="products" class="perm-check">
+            <span style=" font-weight: 500;">Products</span>
+          </label>
+          
+          <label style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 6px; cursor: pointer;">
+            <input type="checkbox" name="pages" value="reviews" class="perm-check">
+            <span style="font-weight: 500;">Reviews</span>
+          </label>
+          
+          <label style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 6px; cursor: pointer;">
+            <input type="checkbox" name="pages" value="customers" class="perm-check">
+            <span style=" font-weight: 500;">Customers</span>
+          </label>
+          
+          <label style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 6px; cursor: pointer;">
+            <input type="checkbox" name="pages" value="workers" class="perm-check">
+            <span style="font-weight: 500;">Users</span>
+          </label>
+          
+          <label style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 6px; cursor: pointer;">
+            <input type="checkbox" name="pages" value="reports" class="perm-check">
+            <span style="font-weight: 500;">Reports</span>
+          </label>
+        </div>
+        
+        <div class="form-actions" style="margin-top: 20px;">
+          <button type="button" class="btn-cancel" onclick="closePermissionsModal()"><i class="fa fa-times"></i>&nbsp;Cancel</button>
+          <button type="submit" class="btn-submit"><i class="fa fa-check"></i>&nbsp;Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Worker Modal -->
+<div id="workerModal" class="x-modal-overlay">
+  <div class="x-modal">
+    <div class="x-modal-header">
+      <div class="x-modal-title" id="modalTitle">Add User</div>
+      <button class="x-modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="x-modal-body">
+      <form id="workerForm" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" id="workerId" name="worker_id">
+        
+        <div class="form-group">
+          <label for="name">Name</label>
+          <input type="text" id="name" name="name" placeholder="Full name" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="phone">Phone</label>
+          <input type="tel" id="phone" name="phone" placeholder="Phone number" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" placeholder="Email address" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="salary">Salary</label>
+          <input type="number" id="salary" name="salary" step="0.01" placeholder="0" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="profession">Profession</label>
+          <input type="text" id="profession" name="profession" placeholder="Job title" required>
+        </div>
+        
+        <div class="form-actions">
+          <button type="button" class="btn-cancel" onclick="closeModal()"><i class="fa fa-times"></i>&nbsp;Cancel</button>
+          <button type="submit" class="btn-submit"><i class="fa fa-check"></i>&nbsp;Save User</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Email Modal -->
+<div id="emailModal" class="x-modal-overlay">
+  <div class="x-modal">
+    <div class="x-modal-header">
+      <div class="x-modal-title"><i class="fa fa-envelope"></i> Send Email to <span id="emailRecipientName"></span></div>
+      <button class="x-modal-close" onclick="closeEmailModal()">✕</button>
+    </div>
+    <div class="x-modal-body">
+      <form id="emailForm" onsubmit="sendEmailToWorker(event)">
+        <input type="hidden" id="emailWorkerId" name="worker_id">
+        <input type="hidden" id="emailWorkerEmail" name="worker_email">
+        
+        <div class="form-group">
+          <label for="emailSubject">Subject</label>
+          <input type="text" id="emailSubject" name="subject" required placeholder="Enter email subject">
+        </div>
+        
+        <div class="form-group">
+          <label for="emailMessage">Message</label>
+          <textarea id="emailMessage" name="message" rows="8" required placeholder="Write your message here..." style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: var(--text-primary); font-family: inherit; resize: vertical;"></textarea>
+        </div>
+        
+        <div class="form-actions">
+          <button type="button" class="btn-cancel" onclick="closeEmailModal()"><i class="fa fa-times"></i>&nbsp;Cancel</button>
+          <button type="submit" class="btn-submit"><i class="fa fa-paper-plane"></i>&nbsp;Send Email</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  function openAddModal() {
+    document.getElementById('modalTitle').textContent = 'Add User';
+    document.getElementById('workerForm').reset();
+    document.getElementById('workerId').value = '';
+    document.getElementById('workerForm').action = '/workers/add';
+    document.getElementById('workerModal').classList.add('active');
+  }
+  
+  function editWorker(id) {
+    // Fetch worker data and populate form
+    fetch(`/workers/get/${id}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.ok) {
+          document.getElementById('modalTitle').textContent = 'Edit User';
+          document.getElementById('workerId').value = data.worker.id;
+          document.getElementById('name').value = data.worker.name;
+          document.getElementById('phone').value = data.worker.phone;
+          document.getElementById('email').value = data.worker.email;
+          document.getElementById('salary').value = data.worker.salary;
+          document.getElementById('profession').value = data.worker.profession;
+          document.getElementById('workerForm').action = '/workers/edit';
+          document.getElementById('workerModal').classList.add('active');
+        }
+      });
+  }
+  
+  // Confirmation Modal Handler
+  (function(){
+    const confirmOverlay = document.getElementById('confirm-overlay');
+    const confirmTitle = document.getElementById('confirm-title');
+    const confirmMessage = document.getElementById('confirm-message');
+    const confirmYes = document.getElementById('confirm-yes');
+    const confirmCancel = document.getElementById('confirm-cancel');
+    let confirmCallback = null;
+
+    window.showConfirm = function(title, message, callback){
+      confirmTitle.textContent = title;
+      confirmMessage.textContent = message;
+      confirmCallback = callback;
+      confirmOverlay.style.display = 'flex';
+      // Reset button state
+      setButtonLoading(confirmYes, false);
+    }
+
+    window.hideConfirm = function(){
+      confirmOverlay.style.display = 'none';
+      confirmCallback = null;
+      setButtonLoading(confirmYes, false);
+    }
+
+    confirmYes.addEventListener('click', () => {
+      if(confirmCallback) {
+        setButtonLoading(confirmYes, true);
+        confirmCallback();
+      }
+    });
+
+    confirmCancel.addEventListener('click', hideConfirm);
+  })();
+  
+  function deleteWorker(id) {
+    showConfirm(
+      'Delete User?',
+      'Are you sure you want to delete this user? This action cannot be undone.',
+      () => {
+        fetch(`/workers/delete/${id}`, { method: 'POST' })
+          .then(res => res.json())
+          .then(data => {
+            hideConfirm();
+            if (data.ok) {
+              showAlert('User deleted successfully!', 'success');
+              setTimeout(() => location.reload(), 1000);
+            } else {
+              showAlert('Error: ' + data.error, 'error');
+            }
+          })
+          .catch(err => {
+            hideConfirm();
+            console.error('Error deleting user:', err);
+            showAlert('Error deleting user', 'error');
+          });
+      }
+    );
+  }
+  
+  function deleteWorkerConfirm(id) {
+    showConfirm(
+      'Delete User?',
+      'This will permanently remove:\n• User account\n• Login credentials\n• Page permissions\n\nThis action cannot be undone!',
+      () => {
+        fetch(`/workers/delete/${id}`, { method: 'POST' })
+          .then(res => res.json())
+          .then(data => {
+            hideConfirm();
+            if (data.ok) {
+              showAlert('User deleted successfully!', 'success');
+              setTimeout(() => location.reload(), 1000);
+            } else {
+              showAlert('Error: ' + data.error, 'error');
+            }
+          })
+          .catch(err => {
+            hideConfirm();
+            console.error('Error deleting user:', err);
+            showAlert('Error deleting user', 'error');
+          });
+      }
+    );
+  }
+  
+  function resetLogin(id) {
+    showConfirm(
+      'Reset Login Credentials?',
+      'This will delete their username and password from the system. They will need to register again using their email.',
+      () => {
+        fetch(`/workers/reset-login/${id}`, { method: 'POST' })
+          .then(res => res.json())
+          .then(data => {
+            hideConfirm();
+            if (data.ok) {
+              showAlert(data.message, 'success');
+              setTimeout(() => location.reload(), 1000);
+            } else {
+              showAlert('Error: ' + data.error, 'error');
+            }
+          })
+          .catch(err => {
+            hideConfirm();
+            console.error('Error resetting login:', err);
+            showAlert('Error resetting login credentials', 'error');
+          });
+      }
+    );
+  }
+  
+  function closeModal() {
+    document.getElementById('workerModal').classList.remove('active');
+  }
+  
+  // Click outside to close disabled - user must use Cancel button or X
+  // document.getElementById('workerModal').addEventListener('click', function(e) {
+  //   if (e.target.classList.contains('x-modal-overlay')) {
+  //     closeModal();
+  //   }
+  // });
+  
+  // Permissions Management
+  function managePermissions(workerId) {
+    // Fetch current permissions for this worker
+    fetch(`/workers/permissions/${workerId}`)
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('permWorker').value = workerId;
+        
+        // Uncheck all first
+        document.querySelectorAll('.perm-check').forEach(cb => cb.checked = false);
+        
+        // Check the ones they have
+        if (data.ok && data.permissions) {
+          data.permissions.forEach(page => {
+            const checkbox = document.querySelector(`.perm-check[value="${page}"]`);
+            if (checkbox) checkbox.checked = true;
+          });
+        }
+        
+        document.getElementById('permissionsModal').classList.add('active');
+      })
+      .catch(err => {
+        console.error('Error fetching permissions:', err);
+        showAlert('Error loading permissions', 'error');
+      });
+  }
+  
+  function closePermissionsModal() {
+    document.getElementById('permissionsModal').classList.remove('active');
+  }
+  
+  // Email Modal Functions
+  function openEmailModal(workerId, workerName, workerEmail) {
+    document.getElementById('emailWorkerId').value = workerId;
+    document.getElementById('emailWorkerEmail').value = workerEmail;
+    document.getElementById('emailRecipientName').textContent = workerName;
+    document.getElementById('emailForm').reset();
+    document.getElementById('emailWorkerId').value = workerId;
+    document.getElementById('emailWorkerEmail').value = workerEmail;
+    document.getElementById('emailModal').classList.add('active');
+  }
+  
+  function closeEmailModal() {
+    document.getElementById('emailModal').classList.remove('active');
+  }
+  
+  function sendEmailToWorker(event) {
+    event.preventDefault();
+    
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    setButtonLoading(submitBtn, true);
+    
+    const workerId = document.getElementById('emailWorkerId').value;
+    const workerEmail = document.getElementById('emailWorkerEmail').value;
+    const subject = document.getElementById('emailSubject').value;
+    const message = document.getElementById('emailMessage').value;
+    
+    fetch('/workers/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        worker_id: workerId,
+        worker_email: workerEmail,
+        subject: subject,
+        message: message
+      })
+    })
+      .then(res => res.json())
+      .then(data => {
+        setButtonLoading(submitBtn, false);
+        if (data.ok) {
+          showAlert('Email sent successfully!', 'success');
+          closeEmailModal();
+        } else {
+          showAlert('Error: ' + data.error, 'error');
+        }
+      })
+      .catch(err => {
+        setButtonLoading(submitBtn, false);
+        console.error('Error sending email:', err);
+        showAlert('Error sending email', 'error');
+      });
+  }
+  
+  function savePermissions(event) {
+    event.preventDefault();
+    
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    setButtonLoading(submitBtn, true);
+    
+    const workerId = document.getElementById('permWorker').value;
+    const checkboxes = document.querySelectorAll('.perm-check:checked');
+    const pages = Array.from(checkboxes).map(cb => cb.value);
+    
+    fetch('/workers/permissions/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        worker_id: workerId,
+        pages: pages
+      })
+    })
+      .then(res => res.json())
+      .then(data => {
+        setButtonLoading(submitBtn, false);
+        if (data.ok) {
+          showAlert('Permissions updated successfully!', 'success');
+          closePermissionsModal();
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          showAlert('Error: ' + data.error, 'error');
+        }
+      })
+      .catch(err => {
+        setButtonLoading(submitBtn, false);
+        console.error('Error updating permissions:', err);
+        showAlert('Error updating permissions', 'error');
+      });
+  }
+  
+  // Click outside to close disabled - user must use Cancel button or X
+  // document.getElementById('permissionsModal').addEventListener('click', function(e) {
+  //   if (e.target.classList.contains('x-modal-overlay')) {
+  //     closePermissionsModal();
+  //   }
+  // });
+  
+  // Search filter function for cards
+  function filterTable() {
+    const searchInput = document.getElementById('searchInput').value.toLowerCase();
+    const cards = document.querySelectorAll('.order-item');
+    
+    cards.forEach(card => {
+      const text = card.textContent.toLowerCase();
+      if (text.includes(searchInput)) {
+        card.style.display = '';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  }
+</script>
+{% endblock %}

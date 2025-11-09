@@ -1,0 +1,686 @@
+{% extends 'base.html' %}
+
+{% block title %}Orders{% endblock title %}
+
+{% block content %}
+<section class="orders-page">
+  <div class="orders-header d-flex align-items-center justify-content-between mb-3">
+    <h1 class="h5 m-0">Orders</h1>
+    <div class="d-flex gap-2">
+      <a href="/archives" class="btn-refresh" style="text-decoration: none; background: rgba(16,185,129,0.1); color: #10b981; border: none;"><i class="fa-solid fa-box-archive"></i> View Archives</a>
+      <button class="btn-refresh" onclick="location.reload()"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+    </div>
+  </div>
+
+  <!-- Reusable Modal -->
+  <div id="modal-overlay" class="x-modal-overlay">
+    <div class="x-modal">
+      <div class="x-modal-header">
+        <div class="x-modal-title" id="modal-title">Details</div>
+        <button class="x-modal-close" id="modal-close">✕</button>
+      </div>
+      <div class="x-modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div id="confirm-overlay" class="confirm-overlay" style="display:none;">
+    <div class="confirm-modal">
+      <button class="modal-close-btn" id="modal-close-btn">&times;</button>
+      <h3 class="confirm-title" id="confirm-title">Are you sure?</h3>
+      <p class="confirm-message" id="confirm-message">This action cannot be undone.</p>
+      <div class="confirm-buttons">
+        <button class="confirm-btn confirm-cancel" id="confirm-cancel">✕ Cancel</button>
+        <button class="confirm-btn confirm-yes" id="confirm-yes">Yes, Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet for map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function(){
+      const overlay = document.getElementById('modal-overlay');
+      const body = document.getElementById('modal-body');
+      const title = document.getElementById('modal-title');
+      const closeBtn = document.getElementById('modal-close');
+
+      function openModal(t, html){
+        title.textContent = t || 'Details';
+        body.innerHTML = html || '';
+        overlay.style.display = 'flex';
+      }
+      function closeModal(){ overlay.style.display = 'none'; body.innerHTML=''; }
+      closeBtn.addEventListener('click', closeModal);
+
+      // Receipt/List handler
+      document.querySelectorAll('.btn-list').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const oid = btn.dataset.oid;
+          openModal(`Order ${oid} • Items`, '<p class="loading">Loading items…</p>');
+          try {
+            const res = await fetch(`/api/orders/${oid}/items`);
+            const data = await res.json();
+            if(!data.ok) { openModal('Order Items', `<p style="color:#ef4444;">${data.error||'Failed to load items'}</p>`); return; }
+            const rows = (data.items||[]).map(it => {
+              const price = Number(it.price||0);
+              const qty = Number(it.qty||0);
+              const finalPrice = Number(it.final_price != null ? it.final_price : price);
+              const prodPct = Number(it.product_discount_percent || 0);
+              const prodAmt = Number(it.product_discount_amount || 0);
+              const itemPct = Number(it.discount_percent || 0);
+              const itemAmt = Number(it.discount || 0);
+              const pct = prodPct || itemPct || 0;
+              const amt = prodAmt || itemAmt || 0;
+              const hasDisc = (pct > 0) || (amt > 0) || (finalPrice < price);
+              const saved = Math.max((price - finalPrice) * qty, 0);
+              const badge = hasDisc ? `<span style="margin-left:8px; font-size:12px; color:#dc2626; background:rgba(220,38,38,.08); padding:2px 6px; border-radius:10px;">-${pct ? pct+ '%' : amt.toLocaleString()}</span>` : '';
+              const variations = it.variations ? `<span style="font-size:14px; color:#1e293b; font-weight:600; margin-left:8px; background:#93c5fd; padding:4px 10px; border-radius:6px; display:inline-block;">${it.variations}</span>` : '';
+              const priceHtml = hasDisc
+                ? `<div><span style="text-decoration:line-through; opacity:.6;">${price.toLocaleString()}</span> <span style="font-weight:600; margin-left:6px;">${finalPrice.toLocaleString()}</span> × ${qty}</div>`
+                : `${price.toLocaleString()} × ${qty}`;
+              const savedHtml = hasDisc && saved > 0 ? `<div style="font-size:12px; color:#16a34a;">saved ${saved.toLocaleString()}</div>` : '';
+              return `
+                <tr>
+                  <td><span style="font-size:15px; font-weight:700; color:#1e293b;">${it.name}</span>${badge}${variations}</td>
+                  <td style="text-align:right;">${priceHtml}</td>
+                  <td style="text-align:right; font-weight:600;">${Number(it.subtotal||finalPrice*qty).toLocaleString()}${savedHtml}</td>
+                </tr>
+              `;
+            }).join('');
+            const subtotal = Number(data.order.subtotal ?? 0);
+            // Compute original total and savings for order-level message
+            const originalSum = (data.items||[]).reduce((s,it)=> s + Number(it.price||0) * Number(it.qty||0), 0);
+            const savings = Math.max(originalSum - subtotal, 0);
+            const savedRow = savings > 0 ? `<tr><td colspan="2" style="text-align:right; color:#16a34a;">You saved</td><td style="text-align:right; color:#16a34a;">${savings.toLocaleString()}</td></tr>` : '';
+            const html = `
+              <div style="margin-bottom:10px; color: var(--text-muted);">${data.order.full_name}, ${data.order.date}, ${data.order.status}</div>
+              <table class="receipt">
+                <thead>
+                  <tr><th>Item</th><th style="text-align:right;">Price x Qty</th><th style="text-align:right;">Subtotal</th></tr>
+                </thead>
+                <tbody>${rows || '<tr><td colspan="3" style="text-align:center; padding:16px;">No items</td></tr>'}</tbody>
+                <tfoot>
+                  ${savedRow}
+                  <tr><td colspan="2" style="text-align:right; font-weight:700; font-size:16px;">TOTAL</td><td style="text-align:right; font-weight:700; font-size:16px;">${subtotal.toLocaleString()}</td></tr>
+                </tfoot>
+              </table>`;
+            openModal(`Order ${oid}, Items`, html);
+          } catch(err){ openModal('Order Items', `<p style="color:#ef4444;">${err}</p>`); }
+        });
+      });
+
+      // Map handler using Leaflet
+      document.querySelectorAll('.btn-map').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const oid = btn.dataset.oid;
+          openModal(`Order ${oid} • Location`, '<p class="loading">Loading map…</p>');
+          try {
+            const res = await fetch(`/api/orders/${oid}/location`);
+            const data = await res.json();
+            if(!data.ok) { openModal('Location', `<p style="color:#ef4444;">${data.error||'Failed to load location'}</p>`); return; }
+            const lat = data.order.lat, lon = data.order.lon;
+            if(lat == null || lon == null){
+              const addrParts = [data.order.address || '', data.order.city || ''].filter(Boolean);
+              const addr = addrParts.join(', ');
+              if (addr) {
+                const html = `<div style="padding:12px; line-height:1.5;"><div style="font-weight:600; margin-bottom:6px;">Address</div><div>${addr}</div><div style="margin-top:8px; font-size:12px; color:#6b7280;">No live map available.</div></div>`;
+                openModal(`Order ${oid}, Location`, html);
+              } else {
+                openModal('Location', `<p style="color:#ef4444;">No location saved for this order.</p>`);
+              }
+              return;
+            }
+            const mapId = 'map_'+Date.now();
+            const html = `<div style="height: 60vh; border-radius: 8px; overflow: hidden;"><div id="${mapId}" style="height:100%;"></div></div>`;
+            openModal(`Order ${oid}, Location`, html);
+            setTimeout(() => {
+              const map = L.map(mapId).setView([lat, lon], 15);
+              L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap'}).addTo(map);
+              L.marker([lat, lon]).addTo(map).bindPopup(`${data.order.full_name}<br>${data.order.address||''} ${data.order.city||''}`);
+            }, 0);
+          } catch(err){ openModal('Location', `<p style=\"color:#ef4444;\">${err}</p>`); }
+        });
+      });
+    });
+  </script>
+
+  <style>
+    /* Modern Date Picker Styling */
+    .date-picker-container {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .date-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.7);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .modern-date-picker {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #fff;
+      padding: 10px 10px 10px 40px;
+      border-radius: 8px;
+      font-size: 14px;
+      width: 100%;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+    .modern-date-picker:focus {
+      outline: none;
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(59,130,246,0.5);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+    }
+    .modern-date-picker:hover {
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(255,255,255,0.15);
+    }
+    .modern-date-picker::-webkit-calendar-picker-indicator {
+      filter: invert(1);
+      opacity: 0.7;
+      cursor: pointer;
+    }
+    .relative {
+      position: relative;
+    }
+    .absolute {
+      position: absolute;
+    }
+    .inset-y-0 {
+      top: 0;
+      bottom: 0;
+    }
+    .start-0 {
+      left: 0;
+    }
+    .flex {
+      display: flex;
+    }
+    .items-center {
+      align-items: center;
+    }
+    .ps-3 {
+      padding-left: 12px;
+    }
+    .pointer-events-none {
+      pointer-events: none;
+    }
+    .text-gray-400 {
+      color: rgba(255,255,255,0.4);
+    }
+    .w-4 {
+      width: 16px;
+    }
+    .h-4 {
+      height: 16px;
+    }
+    
+    /* Confirmation Modal */
+    .confirm-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      backdrop-filter: blur(8px);
+      animation: fadeIn 0.2s ease;
+    }
+    .confirm-modal {
+      background: rgba(30,30,35,0.98);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 32px 40px;
+      max-width: 420px;
+      width: 90%;
+      box-shadow: 0 25px 70px rgba(0,0,0,0.8);
+      text-align: center;
+      animation: slideUp 0.3s ease;
+      position: relative;
+    }
+    .modal-close-btn {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: transparent;
+      border: none;
+      color: rgba(255,255,255,0.5);
+      font-size: 32px;
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      line-height: 1;
+    }
+    .modal-close-btn:hover {
+      color: #fff;
+      transform: rotate(90deg);
+    }
+    .confirm-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 12px;
+      margin-top: 0;
+    }
+    .confirm-message {
+      font-size: 14px;
+      color: rgba(255,255,255,0.6);
+      margin-bottom: 28px;
+      line-height: 1.6;
+    }
+    .confirm-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+    .confirm-btn {
+      padding: 12px 28px;
+      border-radius: 8px;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .confirm-cancel {
+      background: rgba(255,255,255,0.05);
+      color: rgba(255,255,255,0.5);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .confirm-yes {
+      background: rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.9);
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes slideUp {
+      from { transform: translateY(30px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    @keyframes fadeOut {
+      from { opacity: 1; transform: scale(1); }
+      to { opacity: 0; transform: scale(0.9); }
+    }
+    
+  </style>
+
+  <!-- Stats row matching reference -->
+  <div class="stats-grid">
+    <div class="stat-card stat-total">
+      <div class="stat-icon" style="background: rgba(59,130,246,0.15); color:#3b82f6;"><i class="fa-solid fa-clipboard"></i></div>
+      <div class="stat-content">
+        <div class="stat-number">{{ stats.todays_orders or 0 }}</div>
+        <div class="stat-label">Today's Orders</div>
+      </div>
+    </div>
+    <div class="stat-card stat-pending">
+      <div class="stat-icon" style="background: rgba(245,158,11,0.15); color:#f59e0b;"><i class="fa-regular fa-clock"></i></div>
+      <div class="stat-content">
+        <div class="stat-number">{{ stats.not_delivered or 0 }}</div>
+        <div class="stat-label">Not Delivered</div>
+      </div>
+    </div>
+    <div class="stat-card stat-delivered">
+      <div class="stat-icon" style="background: rgba(16,185,129,0.15); color:#10b981;"><i class="fa-solid fa-badge-check fa-circle-check"></i></div>
+      <div class="stat-content">
+        <div class="stat-number">{{ stats.delivered or 0 }}</div>
+        <div class="stat-label">Today's Deliveries</div>
+      </div>
+    </div>
+    <div class="stat-card stat-revenue">
+      <div class="stat-icon" style="background: rgba(139,92,246,0.15); color:#8b5cf6;"><i class="fa-solid fa-chart-line"></i></div>
+      <div class="stat-content">
+        <div class="stat-number">{{ stats.todays_revenue or 'RWF 0' }}</div>
+        <div class="stat-label">Today's Revenue</div>
+      </div>
+    </div>
+    <div class="stat-card stat-revenue">
+      <div class="stat-icon" style="background: rgba(34,197,94,0.15); color:#22c55e;"><i class="fa-solid fa-sack-dollar"></i></div>
+      <div class="stat-content">
+        <div class="stat-number">{{ stats.todays_net_profit or 'RWF 0' }}</div>
+        <div class="stat-label">Today's Net Profit</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search -->
+  <div class="controls-section">
+    <div class="search-box">
+      <i class="fa fa-search"></i>
+      <input type="text" name="q" value="{{ filters.q }}" placeholder="Search by order ID or customer..." form="orders-filter-form" />
+    </div>
+  </div>
+
+  <form id="orders-filter-form" class="filters-row" method="get">
+    <select name="delivered" class="filter-select">
+      <option value="" {% if not filters.delivered %}selected{% endif %}>All Delivery Status</option>
+      <option value="delivered" {% if filters.delivered=='delivered' %}selected{% endif %}>Delivered</option>
+      <option value="not_delivered" {% if filters.delivered=='not_delivered' %}selected{% endif %}>Not Delivered</option>
+      <option value="cancelled" {% if filters.delivered=='cancelled' %}selected{% endif %}>Cancelled</option>
+    </select>
+
+    <div class="date-inputs-wrapper">
+      <div class="date-picker-container">
+        <label class="date-label">From</label>
+        <div class="relative">
+          <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
+            <svg class="w-4 h-4 text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M20 4a2 2 0 0 0-2-2h-2V1a1 1 0 0 0-2 0v1h-3V1a1 1 0 0 0-2 0v1H6V1a1 1 0 0 0-2 0v1H2a2 2 0 0 0-2 2v2h20V4ZM0 18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8H0v10Zm5-8h10a1 1 0 0 1 0 2H5a1 1 0 0 1 0-2Z"/>
+            </svg>
+          </div>
+          <input type="date" name="from" value="{{ filters['from'] }}" class="modern-date-picker" placeholder="Select date">
+        </div>
+      </div>
+      <div class="date-picker-container">
+        <label class="date-label">To</label>
+        <div class="relative">
+          <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
+            <svg class="w-4 h-4 text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M20 4a2 2 0 0 0-2-2h-2V1a1 1 0 0 0-2 0v1h-3V1a1 1 0 0 0-2 0v1H6V1a1 1 0 0 0-2 0v1H2a2 2 0 0 0-2 2v2h20V4ZM0 18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8H0v10Zm5-8h10a1 1 0 0 1 0 2H5a1 1 0 0 1 0-2Z"/>
+            </svg>
+          </div>
+          <input type="date" name="to" value="{{ filters['to'] }}" class="modern-date-picker" placeholder="Select date">
+        </div>
+      </div>
+    </div>
+
+    <select name="sort" class="filter-select">
+      <option value="newest" {% if filters.sort=='newest' %}selected{% endif %}>Newest First</option>
+      <option value="oldest" {% if filters.sort=='oldest' %}selected{% endif %}>Oldest First</option>
+    </select>
+  </form>
+
+  <!-- Orders Cards Grid -->
+  <div class="orders-container">
+    <div class="orders-row">
+      {% for o in orders %}
+      {% set st = o.status|lower %}
+      <div class="order-item">
+        <div class="order-top">
+          <h4>{{ o.code or 'ORD-49' }}</h4>
+          {% set d = (o.delivered or '')|lower %}
+          {% if d == 'yes' %}
+          <span class="status-badge status-delivered">DELIVERED</span>
+          {% elif d == 'no' %}
+          <span class="status-badge status-notdelivered">NOT DELIVERED</span>
+          {% elif d == 'false' %}
+          <span class="status-badge status-cancelled">CANCELLED</span>
+          {% else %}
+          <span class="status-badge status-notdelivered">NOT DELIVERED</span>
+          {% endif %}
+        </div>
+
+        <div class="order-actions">
+          <button class="icon-btn btn-list" data-oid="{{ o.id }}" title="View items"><i class="fa fa-list"></i></button>
+          <button class="icon-btn btn-map" data-oid="{{ o.id }}" title="View location"><i class="fa-solid fa-location-dot"></i></button>
+        </div>
+        
+        <div class="customer-name">{{ o.customer or 'nduwayo frank' }}</div>
+        
+        <div class="order-info">
+          <div class="info-row">
+            <span>Provider:</span> {{ o.provider or 'mtn' }}
+          </div>
+          <div class="info-row">
+            <span>Phone:</span> {{ o.phone or '0795870741' }}
+          </div>
+          <div class="info-row">
+            <span>Date:</span> {{ o.date or '2025-10-20' }}
+          </div>
+          <div class="info-row">
+            <span>Payment:</span> 
+            {% set payment_status = (o.payment_status or 'pending')|lower %}
+            {% if payment_status == 'paid' %}
+            <span style="color: #10b981; font-weight: 600;">PAID</span>
+            {% elif payment_status == 'failed' %}
+            <span style="color: #ef4444; font-weight: 600;">FAILED</span>
+            {% elif payment_status == 'cancelled' %}
+            <span style="color: #ef4444; font-weight: 600;">CANCELLED</span>
+            {% else %}
+            <span style="color: #f59e0b; font-weight: 600;">PENDING</span>
+            {% endif %}
+          </div>
+          {% if o.notes %}
+          <div class="info-row">
+            <span>Notes:</span> {{ o.notes }}
+          </div>
+          {% endif %}
+        </div>
+        
+        <div class="order-total">
+          RWF {{ "{:,.0f}".format(o.total|float) if o.total else "100,619" }}
+        </div>
+        
+        <div class="order-buttons">
+          {% set d = (o.delivered or '')|lower %}
+          {% set st = (o.status or '')|lower %}
+          {% if d == 'false' or st == 'cancelled' %}
+          <!-- Cancelled orders: only show delete button -->
+          <button class="btn-delete" data-oid="{{ o.id }}" style="background: rgba(255,255,255,0.9); color: #1a1a1a; border: 1px solid rgba(255,255,255,0.3); padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; transition: all 0.2s ease; cursor: pointer;">Delete</button>
+          {% else %}
+          <!-- Regular orders: show normal buttons -->
+          <button class="btn-assign" data-oid="{{ o.id }}" data-delivered="{{ d }}">{% if d=='yes' %}Mark Not Delivered{% else %}Mark Delivered{% endif %}</button>
+          <button class="btn-print" data-oid="{{ o.id }}">Cancel</button>
+          {% endif %}
+        </div>
+      </div>
+      {% else %}
+      <!-- No orders found message -->
+      <div class="no-orders-message">
+        <div class="no-orders-icon">
+          <i class="fa-solid fa-search"></i>
+        </div>
+        <h3>No orders found</h3>
+        <p>No orders match your current filter criteria. Try adjusting your filters or search terms.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  {% if pagination and pagination.pages > 1 %}
+  <div style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 20px; padding: 16px 0;">
+    {% set base = '?q=' ~ (filters.q or '') ~ '&status=' ~ (filters.status or '') ~ '&delivered=' ~ (filters.delivered or '') ~ '&from=' ~ (filters['from'] or '') ~ '&to=' ~ (filters['to'] or '') ~ '&sort=' ~ (filters.sort or '') %}
+    
+    <a href="{{ base }}&page=1" class="pagination-btn" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #9ca3af; text-decoration: none; font-size: 13px;">
+      ← First
+    </a>
+    
+    {% if pagination.page > 1 %}
+    <a href="{{ base }}&page={{ pagination.page - 1 }}" class="pagination-btn" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #9ca3af; text-decoration: none; font-size: 13px;">
+      ← Previous
+    </a>
+    {% endif %}
+    
+    <span style="color: #e2e8f0; font-size: 13px; font-weight: 600;">
+      Page {{ pagination.page }} of {{ pagination.pages }}
+    </span>
+    
+    {% if pagination.page < pagination.pages %}
+    <a href="{{ base }}&page={{ pagination.page + 1 }}" class="pagination-btn" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #9ca3af; text-decoration: none; font-size: 13px;">
+      Next →
+    </a>
+    {% endif %}
+    
+    <a href="{{ base }}&page={{ pagination.pages }}" class="pagination-btn" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #9ca3af; text-decoration: none; font-size: 13px;">
+      Last →
+    </a>
+  </div>
+  <style>
+    .pagination-btn:hover { background: rgba(255,255,255,0.1) !important; color: #e2e8f0 !important; }
+  </style>
+  {% endif %}
+
+  <script>
+    (function() {
+      const form = document.getElementById('orders-filter-form');
+      if (!form) return;
+      
+      // Handle form elements
+      form.querySelectorAll('select,input[type=date]').forEach(el => {
+        el.addEventListener('change', () => form.submit());
+      });
+      const q = document.querySelector('input[name="q"][form="orders-filter-form"]');
+      if (q) q.addEventListener('keydown', (e) => { if (e.key === 'Enter') form.submit(); });
+
+      // Edit = toggle delivered yes/no with confirm; Delete = cancel (delivered='false') with confirm
+      function applyBadge(badgeEl, value){
+        const v = (value||'').toLowerCase();
+        badgeEl.classList.remove('status-delivered','status-notdelivered','status-cancelled');
+        if (v === 'yes') { badgeEl.classList.add('status-delivered'); badgeEl.textContent = 'DELIVERED'; }
+        else if (v === 'false') { badgeEl.classList.add('status-cancelled'); badgeEl.textContent = 'CANCELLED'; }
+        else { badgeEl.classList.add('status-notdelivered'); badgeEl.textContent = 'NOT DELIVERED'; }
+      }
+
+      function applyEditLabel(btnEl, value){
+        const v = (value||'').toLowerCase();
+        btnEl.textContent = v === 'yes' ? 'Mark Not Delivered' : 'Mark Delivered';
+      }
+
+      function updatePaymentStatus(card, delivered){
+        const infoRows = card.querySelectorAll('.info-row');
+        let paymentRow = null;
+        infoRows.forEach(row => {
+          if(row.textContent.includes('Payment:')){
+            paymentRow = row;
+          }
+        });
+        if(!paymentRow) return;
+        const d = (delivered||'').toLowerCase();
+        const paymentSpans = paymentRow.querySelectorAll('span');
+        const paymentSpan = paymentSpans[paymentSpans.length - 1];
+        if(!paymentSpan) return;
+        if(d === 'yes'){
+          paymentSpan.outerHTML = '<span style="color: #10b981; font-weight: 600;">PAID</span>';
+        } else if(d === 'false'){
+          paymentSpan.outerHTML = '<span style="color: #ef4444; font-weight: 600;">CANCELLED</span>';
+        } else {
+          paymentSpan.outerHTML = '<span style="color: #f59e0b; font-weight: 600;">PENDING</span>';
+        }
+      }
+
+      // Confirmation modal functions
+      const confirmOverlay = document.getElementById('confirm-overlay');
+      const confirmTitle = document.getElementById('confirm-title');
+      const confirmMessage = document.getElementById('confirm-message');
+      const confirmYes = document.getElementById('confirm-yes');
+      const confirmCancel = document.getElementById('confirm-cancel');
+      const modalCloseBtn = document.getElementById('modal-close-btn');
+      let confirmCallback = null;
+
+      function showConfirm(title, message, callback){
+        confirmTitle.textContent = title;
+        confirmMessage.textContent = message;
+        confirmCallback = callback;
+        confirmOverlay.style.display = 'flex';
+      }
+
+      function hideConfirm(){
+        confirmOverlay.style.display = 'none';
+        confirmCallback = null;
+      }
+
+      confirmYes.addEventListener('click', () => {
+        if(confirmCallback) confirmCallback();
+        hideConfirm();
+      });
+
+      confirmCancel.addEventListener('click', hideConfirm);
+      modalCloseBtn.addEventListener('click', hideConfirm);
+      
+      // Click outside modal to close
+      confirmOverlay.addEventListener('click', (e) => {
+        if(e.target === confirmOverlay) hideConfirm();
+      });
+
+      document.querySelectorAll('.order-item').forEach(card => {
+        const editBtn = card.querySelector('.btn-assign[data-oid]');
+        const delBtn = card.querySelector('.btn-print[data-oid]');
+        const deleteBtn = card.querySelector('.btn-delete[data-oid]');
+        const badge = card.querySelector('.order-top .status-badge');
+        if (editBtn) {
+          editBtn.addEventListener('click', async () => {
+            const oid = editBtn.getAttribute('data-oid');
+            const current = (editBtn.getAttribute('data-delivered')||'').toLowerCase();
+            const next = current === 'yes' ? 'no' : 'yes';
+            const action = next === 'yes' ? 'DELIVERED' : 'NOT DELIVERED';
+            showConfirm(
+              `Mark as ${action}?`,
+              `Order ${oid} will be marked as ${action}. ${next === 'yes' ? 'Payment status will be updated to PAID.' : ''}`,
+              async () => {
+                try {
+                  const res = await fetch(`/api/orders/${oid}/delivered`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ value: next }) });
+                  const data = await res.json();
+                  if (!data.ok) { showFlash(data.error || 'Failed to update', 'error'); return; }
+                  // Reload page to refresh all data
+                  location.reload();
+                } catch (e) {
+                  showFlash(e.message || 'An error occurred', 'error');
+                }
+              }
+            );
+          });
+        }
+        if (delBtn) {
+          delBtn.addEventListener('click', async () => {
+            const oid = delBtn.getAttribute('data-oid');
+            showConfirm(
+              'Cancel Order?',
+              `Order ${oid} will be CANCELLED. This will mark the order as cancelled and update the payment status.`,
+              async () => {
+                try {
+                  const res = await fetch(`/api/orders/${oid}/cancel`, { method: 'POST' });
+                  const data = await res.json();
+                  if (!data.ok) { showFlash(data.error || 'Failed to cancel', 'error'); return; }
+                  // Reload page to refresh all data
+                  location.reload();
+                } catch (e) {
+                  showFlash(e.message || 'An error occurred', 'error');
+                }
+              }
+            );
+          });
+        }
+        if (deleteBtn) {
+          deleteBtn.addEventListener('click', async () => {
+            const oid = deleteBtn.getAttribute('data-oid');
+            showConfirm(
+              'Delete Order?',
+              `Order ${oid} will be PERMANENTLY DELETED. This action cannot be undone. Are you sure?`,
+              async () => {
+                try {
+                  const res = await fetch(`/api/orders/${oid}/delete`, { method: 'DELETE' });
+                  const data = await res.json();
+                  if (!data.ok) { showFlash(data.error || 'Failed to delete', 'error'); return; }
+                  // Reload page to refresh all data
+                  location.reload();
+                } catch (e) {
+                  showFlash(e.message || 'An error occurred', 'error');
+                }
+              }
+            );
+          });
+        }
+      });
+    })();
+  </script>
+</section>
+{% endblock %}

@@ -1,0 +1,1057 @@
+{% extends 'base.html' %}
+{% block title %}Manage Variations{% endblock %}
+{% block content %}
+<div class="variations-page" style="min-height: 100vh;">
+<div class="orders-header d-flex align-items-center justify-content-between mb-3">
+  <div>
+    <h1 class="h5 m-0">Manage Variations</h1>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn-export" onclick="history.back()">← Back</button>
+    <button class="btn-primary action-btn" id="btn-add-image-var"><i class="fa fa-image"></i><span class="btn-text"> Add Image Variation</span></button>
+  </div>
+</div>
+
+<!-- Product Info Stat Card -->
+<div class="stat-card stat-total" style="max-width: 500px; margin-bottom: 20px;">
+  <div class="stat-icon"><i class="fa fa-box"></i></div>
+  <div class="stat-content">
+    <div class="stat-number">{{ product.name }}</div>
+    <div class="stat-label" style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+      <span style="color:rgba(255,255,255,0.6); font-size:12px;">Total Stock:</span>
+      <input type="number" id="product-stock-input" value="{{ product.stock }}" min="0" style="width:80px; padding:6px 10px; background:#0a0a0a; border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:#fff; font-weight:600; font-size:13px;">
+      <span style="color:rgba(255,255,255,0.4); font-size:12px;">units</span>
+      <button onclick="updateProductStock()" class="stock-update-btn">
+        <i class="fa fa-check"></i>
+      </button>
+    </div>
+    <div id="stock-warning" style="display:none; margin-top:10px; padding:8px 12px; background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.3); border-radius:6px; font-size:11px; color:#fbbf24;">
+      <i class="fa fa-exclamation-triangle"></i> <span id="stock-warning-text"></span>
+    </div>
+  </div>
+</div>
+
+<style>
+  .variations-page {
+    padding: 20px;
+  }
+  @media (max-width: 640px) {
+    .variations-page {
+      padding: 12px;
+    }
+  }
+  @media (max-width: 480px) {
+    .variations-page {
+      padding: 8px;
+    }
+  }
+  
+  .orders-header{ padding:0; margin-bottom:20px; }
+  .action-btn{ 
+    display:inline-flex; 
+    align-items:center; 
+    gap:8px; 
+    padding:10px 16px; 
+    border-radius:8px; 
+    border:none; 
+    background:rgba(255,255,255,0.1); 
+    color:rgba(255,255,255,0.95); 
+    font-weight:600; 
+    cursor:pointer; 
+    font-size:13px; 
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+  }
+  .action-btn:hover{ 
+    background:rgba(255,255,255,0.1); 
+  }
+  .action-btn i {
+    font-size: 14px;
+  }
+  
+  /* Mobile responsiveness for action button */
+  @media (max-width: 640px) {
+    .orders-header {
+      flex-direction: row !important;
+      gap: 8px;
+    }
+    .orders-header h1 {
+      font-size: 16px !important;
+    }
+    .action-btn {
+      padding: 10px 12px;
+      font-size: 12px;
+      gap: 6px;
+    }
+  }
+  @media (max-width: 480px) {
+    .action-btn {
+      padding: 10px;
+    }
+    .action-btn .btn-text {
+      display: none;
+    }
+    .action-btn i {
+      font-size: 16px;
+      margin: 0;
+    }
+  }
+  
+  .btn-export{ 
+    padding:10px 16px; 
+    border-radius:8px; 
+    border:none; 
+    background:transparent; 
+    color:rgba(255,255,255,0.7); 
+    font-weight:600; 
+    cursor:pointer; 
+    font-size:13px; 
+    transition: all 0.2s ease;
+  }
+  .btn-export:hover{ 
+    background:transparent; 
+    color:rgba(255,255,255,0.9); 
+  }
+  @media (max-width: 480px) {
+    .btn-export {
+      padding: 10px 12px;
+      font-size: 12px;
+    }
+  }
+  
+  .var-grid{ display:flex; flex-wrap:wrap; gap:20px; margin:20px 0; }
+  .var-card{ background:#1a1a1a; border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:16px; flex: 1 1 calc(33.333% - 14px); min-width: 300px; }
+  /* Single variation compact style */
+  .var-grid.single-variation .var-card { flex: 0 0 auto; max-width: 400px; }
+  .var-grid.single-variation .var-card .var-card-img { height: 100px; }
+  .var-card:hover{ background:#1a1a1a; border:1px solid rgba(255,255,255,0.06); }
+  .var-card-header{ display:flex; justify-content:space-between; margin-bottom:12px; }
+  .var-card-title{ font-size:15px; font-weight:600; color:#fff; margin:0; }
+  .var-card-type{ font-size:10px; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:0.5px; margin-top:2px; }
+  .var-card-img{ width:100%; height:160px; object-fit:cover; border-radius:6px; margin:10px 0; border:1px solid rgba(255,255,255,0.06); background:#0a0a0a; transition:all 0.3s ease; }
+  
+  .img-hover-container{ position:relative; }
+  .img-hover-container:hover .var-card-img{ filter:brightness(0.7); }
+  .img-change-btn{ 
+    position:absolute; 
+    top:50%; 
+    left:50%; 
+    transform:translate(-50%, -50%); 
+    background:rgba(255,255,255,0.95); 
+    border:none; 
+    color:#000; 
+    width:44px; 
+    height:44px; 
+    border-radius:50%; 
+    cursor:pointer; 
+    font-size:18px; 
+    display:flex; 
+    align-items:center; 
+    justify-content:center; 
+    opacity:0; 
+    transition:all 0.3s ease; 
+    box-shadow:0 4px 12px rgba(0,0,0,0.3);
+  }
+  .img-hover-container:hover .img-change-btn{ opacity:1; }
+  .img-change-btn:hover{ 
+    background:rgba(255,255,255,0.95); 
+  }
+  .img-change-btn:active{ transform:translate(-50%, -50%) scale(0.95); }
+  
+  #product-stock-input:focus{ outline:none; border-color:rgba(59,130,246,0.4); background:#0f0f0f; }
+  
+  .stock-update-btn{
+    width:32px;
+    height:32px;
+    border-radius:6px;
+    border:1px solid rgba(34,197,94,0.2);
+    background:rgba(34,197,94,0.1);
+    color:#22c55e;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:14px;
+    transition:all 0.2s ease;
+    margin-left:auto;
+  }
+  .stock-update-btn:hover{
+    background:rgba(34,197,94,0.1);
+    border-color:rgba(34,197,94,0.2);
+  }
+  .stock-update-btn:active{
+    transform:scale(0.95);
+  }
+  
+  .var-stock-input{ display:flex; gap:10px; align-items:center; margin:10px 0; }
+  .var-stock-input label{ font-size:11px; color:rgba(255,255,255,0.6); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; }
+  .var-stock-input input{ flex:1; padding:7px 10px; background:#0a0a0a; border:1px solid rgba(255,255,255,0.06); border-radius:4px; color:#fff; font-weight:600; font-size:13px; }
+  .var-stock-input input:focus{ outline:none; border-color:rgba(255,255,255,0.1); background:#111; }
+  .var-stock-input input:hover{ background:#0a0a0a; }
+  
+  .var-actions{ display:flex; gap:6px; margin-top:12px; }
+  .var-actions button{ flex:1; padding:7px; border-radius:4px; font-size:11px; font-weight:600; cursor:pointer; border:1px solid rgba(255,255,255,0.06); }
+  .var-actions button:hover{ background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.8); }
+  .btn-update{ background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.8); }
+  .btn-update:hover{ background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.8); }
+  .btn-remove{ background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.8); }
+  .btn-remove:hover{ background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.8); }
+  .btn-add-drop{ background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.8); }
+  .btn-add-drop:hover{ background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.8); }
+  
+  /* Error card styling - no animation */
+  .var-card.error-card {
+    border: 2px solid rgba(239, 68, 68, 0.6) !important;
+    background: rgba(239, 68, 68, 0.05) !important;
+    order: -999;
+  }
+  
+  .var-card.error-card .var-card-title {
+    color: #ef4444;
+  }
+  
+  .var-card.error-card .var-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .var-card.error-card .var-card-header::before {
+    content: '⚠️';
+    font-size: 20px;
+  }
+  
+  .dropdown-section{ margin-top:12px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.06); }
+  .dropdown-title{ font-size:10px; color:rgba(255,255,255,0.5); font-weight:600; text-transform:uppercase; margin-bottom:8px; letter-spacing:0.5px; }
+  .dropdown-item{ background:#0a0a0a; border:1px solid rgba(255,255,255,0.06); border-radius:4px; padding:8px 10px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; }
+  .dropdown-item:hover{ background:#0a0a0a; border:1px solid rgba(255,255,255,0.06); }
+  .dropdown-info{ font-size:12px; color:rgba(255,255,255,0.85); }
+  .dropdown-info .name{ font-weight:600; }
+  .dropdown-info .stock{ color:rgba(255,255,255,0.5); font-size:11px; margin-top:2px; display:block; }
+  .dropdown-btns{ display:flex; gap:4px; }
+  .dropdown-btns button{ padding:4px 8px; border-radius:3px; font-size:10px; border:1px solid rgba(255,255,255,0.06); cursor:pointer; background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.7); font-weight:600; }
+  .dropdown-btns button:hover{ background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.7); }
+  
+  .warning{ background:#1a1a1a; border:1px solid rgba(239,68,68,0.2); color:#fca5a5; padding:12px 14px; border-radius:6px; font-size:12px; font-weight:500; margin:16px 0; border-left:3px solid #ef4444; }
+  
+  h2{ font-size:16px; font-weight:600; color:#fff; margin:30px 0 12px; letter-spacing:-0.3px; }
+  h2 i{ margin-right:8px; opacity:0.7; }
+  
+  /* Variation Modals - Rebuilt */
+  .var-modal-overlay{ 
+    position:fixed; 
+    inset:0;
+    background:rgba(0,0,0,0.8); 
+    backdrop-filter: blur(6px);
+    z-index:9999;
+    display:none;
+    align-items:center;
+    justify-content:center;
+  }
+  .var-modal-overlay.show{ 
+    display:flex;
+  }
+  .var-modal{ 
+    background: var(--surface); 
+    border:1px solid var(--border); 
+    border-radius:12px; 
+    padding:20px; 
+    max-width:440px; 
+    width:92%; 
+    max-height:90vh;
+    overflow-y:auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .var-modal-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:16px;
+  }
+  .var-modal-title{ 
+    font-size:18px; 
+    font-weight:700; 
+    color: var(--text-primary);
+  }
+  .var-modal-close{
+    background: rgba(255,255,255,0.05);
+    border:1px solid var(--border);
+    color: var(--text-muted);
+    width:28px;
+    height:28px;
+    border-radius:6px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    font-size:16px;
+  }
+  .var-modal-close:hover{
+    background: rgba(255,255,255,0.1);
+  }
+  .var-modal-form{ 
+    display:grid; 
+    gap:12px; 
+  }
+  .var-modal-field{ 
+    display:grid; 
+    gap:5px; 
+  }
+  .var-modal-field label{ 
+    font-size:11px; 
+    color: var(--text-muted); 
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:0.3px;
+  }
+  .var-modal-field input, 
+  .var-modal-field select{ 
+    width:100%; 
+    padding:8px 10px; 
+    background: var(--surface); 
+    border:1px solid var(--border); 
+    border-radius:6px; 
+    color: var(--text-primary); 
+    font-size:13px; 
+  }
+  .var-modal-field input:focus, 
+  .var-modal-field select:focus{ 
+    outline:none; 
+    border-color:rgba(255,255,255,0.2); 
+  }
+  .var-modal-actions{ 
+    display:flex; 
+    gap:8px; 
+    margin-top:4px; 
+  }
+  .var-modal-actions button{ 
+    flex:1; 
+    padding:9px; 
+    border-radius:6px; 
+    font-weight:600; 
+    cursor:pointer; 
+    border:none; 
+    font-size:13px; 
+  }
+  .var-modal-btn-cancel{ 
+    background:rgba(255,255,255,0.05); 
+    color:rgba(255,255,255,0.7); 
+    border:1px solid var(--border);
+  }
+  .var-modal-btn-cancel:hover{ 
+    background:rgba(255,255,255,0.08); 
+  }
+  .var-modal-btn-save{ 
+    background:rgba(255,255,255,0.12); 
+    color:rgba(255,255,255,0.95); 
+  }
+  .var-modal-btn-save:hover{ 
+    background:rgba(255,255,255,0.18); 
+  }
+</style>
+
+<div id="warnings-container"></div>
+
+<h2 style="font-size:18px; font-weight:700; color:#fff; margin:20px 0 12px;"><i class="fa fa-image"></i> Image Variations</h2>
+<div class="var-grid" id="image-vars-grid"></div>
+
+<h2 style="font-size:18px; font-weight:700; color:#fff; margin:30px 0 12px;"><i class="fa fa-list"></i> Standalone Dropdowns</h2>
+<div class="var-grid" id="unlinked-drops-grid"></div>
+
+<!-- Add Image Variation Modal -->
+<div class="var-modal-overlay" id="modal-img-var">
+  <div class="var-modal">
+    <div class="var-modal-header">
+      <div class="var-modal-title">Add Image Variation</div>
+      <button type="button" class="var-modal-close" id="close-img-var">✕</button>
+    </div>
+    <form class="var-modal-form" id="form-img-var">
+      <div class="var-modal-field">
+        <label>Type</label>
+        <input type="text" name="type" placeholder="e.g., Color, Size, Style, Material" required>
+      </div>
+      <div class="var-modal-field">
+        <label>Name</label>
+        <input type="text" name="name" placeholder="e.g., Red, Blue, Large" required>
+      </div>
+      <div class="var-modal-field">
+        <label>Description (Optional)</label>
+        <input type="text" name="description" placeholder="Additional details">
+      </div>
+      <div class="var-modal-field">
+        <label>Stock</label>
+        <input type="number" name="stock" min="0" value="0" required>
+      </div>
+      <div class="var-modal-field">
+        <label>Image</label>
+        <input type="file" name="image" id="img-var-file" accept="image/*" required style="padding:6px 10px;">
+        <div id="img-var-preview" style="margin-top:8px; display:none;">
+          <img src="" alt="Preview" style="width:100%; height:120px; object-fit:cover; border-radius:6px; border:1px solid var(--border);">
+        </div>
+      </div>
+      <div class="var-modal-actions">
+        <button type="button" class="var-modal-btn-cancel" id="cancel-img-var">Cancel</button>
+        <button type="submit" class="var-modal-btn-save">Save Variation</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Add Dropdown Variation Modal -->
+<div class="var-modal-overlay" id="modal-drop-var">
+  <div class="var-modal">
+    <div class="var-modal-header">
+      <div class="var-modal-title">Add Dropdown Variations</div>
+      <button type="button" class="var-modal-close" id="close-drop-var">✕</button>
+    </div>
+    <div style="padding:20px;">
+      <input type="hidden" id="batch-img-var-id">
+      <div id="batch-img-var-info" style="padding:10px; background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.3); border-radius:6px; margin-bottom:15px; font-size:12px; color:#3b82f6;">
+        <strong>Image Variation Stock:</strong> <span id="batch-parent-stock">0</span> units
+      </div>
+      
+      <div id="form-drop-var-single" style="display:grid; grid-template-columns:1fr 1fr 100px 60px; gap:8px; margin-bottom:15px; align-items:end;">
+        <div>
+          <label style="font-size:11px; color:rgba(255,255,255,0.6); display:block; margin-bottom:4px;">Attribute Name</label>
+          <input type="text" id="input-attr-name" placeholder="e.g., Size" style="width:100%; padding:8px; background:#0a0a0a; border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:#fff;" onkeypress="if(event.key==='Enter'){event.preventDefault();addToBatch();}">
+        </div>
+        <div>
+          <label style="font-size:11px; color:rgba(255,255,255,0.6); display:block; margin-bottom:4px;">Value</label>
+          <input type="text" id="input-attr-value" placeholder="e.g., Large" style="width:100%; padding:8px; background:#0a0a0a; border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:#fff;" onkeypress="if(event.key==='Enter'){event.preventDefault();addToBatch();}">
+        </div>
+        <div>
+          <label style="font-size:11px; color:rgba(255,255,255,0.6); display:block; margin-bottom:4px;">Stock</label>
+          <input type="number" id="input-stock" min="0" value="0" style="width:100%; padding:8px; background:#0a0a0a; border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:#fff;" onkeypress="if(event.key==='Enter'){event.preventDefault();addToBatch();}">
+        </div>
+        <button type="button" onclick="addToBatch()" style="padding:8px 12px; background:rgba(34,197,94,0.15); border:1px solid rgba(34,197,94,0.3); color:#22c55e; border-radius:4px; cursor:pointer; font-size:12px; font-weight:600;">+ Add</button>
+      </div>
+      
+      <div id="batch-list" style="max-height:200px; overflow-y:auto; margin-bottom:15px; border:1px solid rgba(255,255,255,0.06); border-radius:6px; background:#0a0a0a;"></div>
+      
+      <div style="padding:10px; background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.3); border-radius:6px; margin-bottom:15px; font-size:11px; color:#fbbf24;">
+        <strong>Total Stock:</strong> <span id="batch-total-stock">0</span> units
+      </div>
+      
+      <div class="var-modal-actions">
+        <button type="button" class="var-modal-btn-cancel" onclick="closeModalById('modal-drop-var'); clearBatch();">Cancel</button>
+        <button type="button" class="var-modal-btn-save" onclick="saveBatchDropdowns()">Save All to Database</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirmation Modal for Deletes -->
+<div class="var-modal-overlay" id="modal-confirm-delete">
+  <div class="var-modal" style="max-width: 450px;">
+    <div class="var-modal-header">
+      <div class="var-modal-title">Confirm Delete</div>
+      <button type="button" class="var-modal-close" id="close-confirm-delete">✕</button>
+    </div>
+    <div style="padding:20px;">
+      <p id="confirm-delete-message" style="color: rgba(255,255,255,0.85); font-size: 14px; line-height: 1.6; margin-bottom: 20px;"></p>
+      <div class="var-modal-actions">
+        <button type="button" class="var-modal-btn-cancel" id="cancel-confirm-delete">Cancel</button>
+        <button type="button" class="var-modal-btn-save" id="ok-confirm-delete" style="background: #ef4444; color: white;">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Dropdown Variation Modal -->
+<div class="var-modal-overlay" id="modal-edit-drop-var">
+  <div class="var-modal">
+    <div class="var-modal-header">
+      <div class="var-modal-title">Edit Dropdown Variation</div>
+      <button type="button" class="var-modal-close" id="close-edit-drop-var">✕</button>
+    </div>
+    <div style="padding:20px;">
+      <form id="form-edit-drop-var">
+        <input type="hidden" id="edit-drop-id">
+        
+        <div class="var-modal-field">
+          <label>Attribute Name</label>
+          <input type="text" id="edit-drop-attr-name" placeholder="e.g., Size" required style="width:100%; padding:10px; background:#0a0a0a; border:1px solid rgba(255,255,255,0.1); border-radius:6px; color:#fff;">
+        </div>
+        
+        <div class="var-modal-field">
+          <label>Attribute Value</label>
+          <input type="text" id="edit-drop-attr-value" placeholder="e.g., Large" required style="width:100%; padding:10px; background:#0a0a0a; border:1px solid rgba(255,255,255,0.1); border-radius:6px; color:#fff;">
+        </div>
+        
+        <div class="var-modal-field">
+          <label>Stock</label>
+          <input type="number" id="edit-drop-stock" min="0" required style="width:100%; padding:10px; background:#0a0a0a; border:1px solid rgba(255,255,255,0.1); border-radius:6px; color:#fff;">
+        </div>
+        
+        <div class="var-modal-actions">
+          <button type="button" class="var-modal-btn-cancel" id="cancel-edit-drop-var">Cancel</button>
+          <button type="submit" class="var-modal-btn-save">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+const pid={{ product.id }};
+const prodStock={{ product.stock }};
+
+// Modal functions - Rebuilt
+function openModal(id){ 
+  const modal = document.getElementById(id);
+  if(modal) {
+    modal.classList.add('show');
+  }
+}
+
+function closeModalById(id){ 
+  const modal = document.getElementById(id);
+  if(modal) {
+    modal.classList.remove('show');
+  }
+}
+async function load(){
+  try{
+    const r=await fetch(`/api/products/${pid}/variations`);
+    const d=await r.json();
+    if(!d.ok){ showFlash(d.error || 'Error loading variations', 'error'); return; }
+    renderImgVars(d.image_variations||[]);
+    renderUnlinkedDrops(d.unlinked_dropdowns||[]);
+    checkWarnings(d);
+    
+    // Also refresh the product stock display
+    const prodRes = await fetch(`/api/products/${pid}`);
+    const prodData = await prodRes.json();
+    if(prodData.ok && prodData.product) {
+      document.getElementById('product-stock-input').value = prodData.product.stock;
+      checkStockMismatch(prodData.product.stock, d.image_variations||[]);
+    }
+  }catch(e){ showFlash(e.message || String(e), 'error'); }
+}
+
+function checkStockMismatch(productStock, imageVariations){
+  const warningDiv = document.getElementById('stock-warning');
+  const warningText = document.getElementById('stock-warning-text');
+  
+  // Calculate total image variation stock
+  const totalImgStock = imageVariations.reduce((sum, iv) => sum + (iv.stock || 0), 0);
+  
+  if(totalImgStock < productStock) {
+    const diff = productStock - totalImgStock;
+    warningText.textContent = `Product stock (${productStock}) is ${diff} units higher than total variation stock (${totalImgStock}). ${diff} units are unallocated.`;
+    warningDiv.style.display = 'block';
+  } else {
+    warningDiv.style.display = 'none';
+  }
+}
+
+async function updateProductStock(){
+  const newStock = parseInt(document.getElementById('product-stock-input').value);
+  if(isNaN(newStock) || newStock < 0) {
+    showFlash('Invalid stock value', 'error');
+    return;
+  }
+  
+  try{
+    // First get current product data
+    const getRes = await fetch(`/api/products/${pid}`);
+    const getData = await getRes.json();
+    if(!getData.ok) {
+      showFlash('Error fetching product: ' + getData.error, 'error');
+      return;
+    }
+    
+    // Update with new stock
+    const product = getData.product;
+    product.stock = newStock;
+    
+    const r = await fetch(`/api/products/${pid}/update`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(product)
+    });
+    const d = await r.json();
+    if(!d.ok){ 
+      showFlash('Error: ' + d.error, 'error'); 
+      return; 
+    }
+    showFlash('Product stock updated successfully!', 'success');
+    load();
+  }catch(e){ 
+    showFlash('Error: ' + e.message, 'error'); 
+  }
+}
+function renderImgVars(items){
+  const g=document.getElementById('image-vars-grid');
+  if(!items.length){ g.innerHTML='<p style="color:rgba(255,255,255,0.5);">No image variations.</p>'; return; }
+  // Add single-variation class if only one item
+  if(items.length === 1) g.classList.add('single-variation'); else g.classList.remove('single-variation');
+  g.innerHTML=items.map(iv=>{
+    const dropdownSum = (iv.dropdowns || []).reduce((sum, d) => sum + (d.stock || 0), 0);
+    const hasError = dropdownSum < iv.stock;
+    return `
+    <div class="var-card${hasError ? ' error-card' : ''}">
+      <div class="var-card-header"><div><h4 class="var-card-title">${iv.name}</h4><p class="var-card-type">${iv.type}</p></div></div>
+      <div style="position:relative;" class="img-hover-container">
+        <img src="${iv.img_url}" class="var-card-img" id="img-preview-${iv.id}">
+        <input type="file" id="img-file-${iv.id}" accept="image/*" style="display:none;" onchange="previewAndUploadImage(${iv.id}, this)">
+        <button onclick="document.getElementById('img-file-${iv.id}').click()" class="img-change-btn">
+          <i class="fa fa-camera"></i>
+        </button>
+      </div>
+      <div class="var-stock-input"><label>Stock:</label><input type="number" min="0" value="${iv.stock}" id="img-stock-${iv.id}"></div>
+      ${iv.description?`<p style="font-size:12px;color:rgba(255,255,255,0.6);margin:8px 0;">${iv.description}</p>`:''}
+      ${(() => {
+        const dropdownSum = (iv.dropdowns || []).reduce((sum, d) => sum + (d.stock || 0), 0);
+        if(dropdownSum < iv.stock) {
+          const diff = iv.stock - dropdownSum;
+          return `<div style="margin:8px 0; padding:6px 10px; background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.3); border-radius:4px; font-size:10px; color:#fbbf24;">
+            <i class="fa fa-exclamation-triangle"></i> ${diff} units unallocated (${dropdownSum}/${iv.stock})
+          </div>`;
+        }
+        return '';
+      })()}
+      <div class="dropdown-section">
+        <div class="dropdown-title">Linked Dropdowns</div>
+        <div id="drops-${iv.id}">${iv.dropdowns&&iv.dropdowns.length?renderDrops(iv.dropdowns):'<p style="font-size:12px;color:rgba(255,255,255,0.4);">No dropdowns.</p>'}</div>
+      </div>
+      <div class="var-actions">
+        <button class="btn-update" onclick="updateImgStock(${iv.id})">Update Stock</button>
+        <button class="btn-add-drop" onclick="openAddDrop(${iv.id})">+ Dropdown</button>
+        <button class="btn-remove" onclick="deleteImgVar(${iv.id})">Remove</button>
+      </div>
+    </div>
+  `;
+  }).join('');
+}
+function renderDrops(drops){
+  return drops.map(d=>`
+    <div class="dropdown-item">
+      <div class="dropdown-info"><span class="name">${d.attr_name}: ${d.attr_value}</span><br><span class="stock">Stock: ${d.stock}</span></div>
+      <div class="dropdown-btns">
+        <button class="btn-update" onclick="editDrop(${d.id},'${d.attr_name}','${d.attr_value}',${d.stock})">Edit</button>
+        <button class="btn-remove" onclick="deleteDrop(${d.id})">×</button>
+      </div>
+    </div>
+  `).join('');
+}
+function renderUnlinkedDrops(items){
+  const g=document.getElementById('unlinked-drops-grid');
+  if(!items.length){ g.innerHTML='<p style="color:rgba(255,255,255,0.5);">No standalone dropdowns.</p>'; }
+  else{
+    g.innerHTML=items.map(d=>`
+      <div class="var-card">
+        <div class="var-card-header"><h4 class="var-card-title">${d.attr_name}: ${d.attr_value}</h4></div>
+        <div class="var-stock-input"><label>Stock:</label><input type="number" min="0" value="${d.stock}" id="unlinked-stock-${d.id}"></div>
+        <div class="var-actions">
+          <button class="btn-update" onclick="updateUnlinkedStock(${d.id})">Update</button>
+          <button class="btn-remove" onclick="deleteDrop(${d.id})">Remove</button>
+        </div>
+      </div>
+    `).join('');
+  }
+}
+function checkWarnings(d){
+  const warns=[];
+  if(d.image_variations&&d.image_variations.length){
+    const imgSum=d.image_variations.reduce((s,iv)=>s+(iv.stock||0),0);
+    if(imgSum<prodStock) warns.push({type:'error', text:`Image variations total (${imgSum}) < product stock (${prodStock})`});
+    d.image_variations.forEach(iv=>{
+      if(iv.dropdowns&&iv.dropdowns.length){
+        const dSum=iv.dropdowns.reduce((s,dr)=>s+(dr.stock||0),0);
+        if(dSum<iv.stock) warns.push({type:'error', text:`"${iv.name}" dropdowns (${dSum}) < image var stock (${iv.stock})`});
+      }
+    });
+  }
+  if(d.unlinked_dropdowns&&d.unlinked_dropdowns.length){
+    const uSum=d.unlinked_dropdowns.reduce((s,dr)=>s+(dr.stock||0),0);
+    if(uSum<prodStock) warns.push({type:'error', text:`Standalone dropdowns (${uSum}) < product stock (${prodStock})`});
+  }
+  document.getElementById('warnings-container').innerHTML=warns.length?warns.map(w=>`<div style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.3); border-radius:6px; margin:12px 0; border-left:3px solid #ef4444;"><i class="fa fa-exclamation-circle" style="color:#ef4444; margin-top:2px; flex-shrink:0;"></i><span style="color:#fca5a5; font-size:13px; font-weight:500;">${w.text}</span></div>`).join(''):'';
+}
+// Event listeners
+const addImgBtn = document.getElementById('btn-add-image-var');
+const closeImgBtn = document.getElementById('close-img-var');
+const cancelImgBtn = document.getElementById('cancel-img-var');
+const closeDropBtn = document.getElementById('close-drop-var');
+const cancelDropBtn = document.getElementById('cancel-drop-var');
+
+if(addImgBtn) {
+  addImgBtn.addEventListener('click', () => {
+    console.log('Add Image Variation button clicked');
+    openModal('modal-img-var');
+  });
+} else {
+  console.error('btn-add-image-var not found!');
+}
+
+if(closeImgBtn) closeImgBtn.addEventListener('click', () => closeModalById('modal-img-var'));
+if(cancelImgBtn) cancelImgBtn.addEventListener('click', () => closeModalById('modal-img-var'));
+if(closeDropBtn) closeDropBtn.addEventListener('click', () => closeModalById('modal-drop-var'));
+if(cancelDropBtn) cancelDropBtn.addEventListener('click', () => closeModalById('modal-drop-var'));
+
+// Edit dropdown modal event listeners
+const closeEditDropBtn = document.getElementById('close-edit-drop-var');
+const cancelEditDropBtn = document.getElementById('cancel-edit-drop-var');
+if(closeEditDropBtn) closeEditDropBtn.addEventListener('click', () => closeModalById('modal-edit-drop-var'));
+if(cancelEditDropBtn) cancelEditDropBtn.addEventListener('click', () => closeModalById('modal-edit-drop-var'));
+
+// Edit dropdown form submit handler
+const editDropForm = document.getElementById('form-edit-drop-var');
+if(editDropForm) editDropForm.addEventListener('submit', saveEditDrop);
+
+// Confirmation modal event listeners
+const closeConfirmBtn = document.getElementById('close-confirm-delete');
+const cancelConfirmBtn = document.getElementById('cancel-confirm-delete');
+const okConfirmBtn = document.getElementById('ok-confirm-delete');
+let confirmCallback = null;
+
+if(closeConfirmBtn) closeConfirmBtn.addEventListener('click', () => {
+  closeModalById('modal-confirm-delete');
+  confirmCallback = null;
+});
+if(cancelConfirmBtn) cancelConfirmBtn.addEventListener('click', () => {
+  closeModalById('modal-confirm-delete');
+  confirmCallback = null;
+});
+if(okConfirmBtn) okConfirmBtn.addEventListener('click', () => {
+  closeModalById('modal-confirm-delete');
+  if(confirmCallback) confirmCallback();
+  confirmCallback = null;
+});
+
+// Show confirmation modal function
+function showConfirmModal(message, callback){
+  document.getElementById('confirm-delete-message').textContent = message;
+  confirmCallback = callback;
+  openModal('modal-confirm-delete');
+}
+
+// Image preview handler
+document.getElementById('img-var-file').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if(file) {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const preview = document.getElementById('img-var-preview');
+      preview.querySelector('img').src = ev.target.result;
+      preview.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+// Form submit handler
+document.getElementById('form-img-var').addEventListener('submit', async(e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  
+  // First upload the image
+  const imageFile = fd.get('image');
+  if(!imageFile || imageFile.size === 0) {
+    showFlash('Please select an image', 'error');
+    return;
+  }
+  
+  try{
+    // Upload image first
+    const uploadFd = new FormData();
+    uploadFd.append('image', imageFile);
+    uploadFd.append('name', fd.get('name'));
+    uploadFd.append('type', 'variation');
+    
+    const uploadRes = await fetch('/api/uploads/variation-image', {
+      method: 'POST',
+      body: uploadFd
+    });
+    const uploadData = await uploadRes.json();
+    if(!uploadData.ok) {
+      showFlash('Image upload failed: ' + uploadData.error, 'error');
+      return;
+    }
+    
+    // Now create the variation with the uploaded image URL
+    const payload = {
+      type: fd.get('type'),
+      name: fd.get('name'),
+      description: fd.get('description'),
+      stock: parseInt(fd.get('stock')),
+      img_url: uploadData.url
+    };
+    
+    const r = await fetch(`/api/products/${pid}/image-variations`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const d = await r.json();
+    if(!d.ok){ showFlash(d.error || 'Error loading variations', 'error'); return; }
+    closeModalById('modal-img-var');
+    e.target.reset();
+    document.getElementById('img-var-preview').style.display = 'none';
+    load();
+  }catch(err){ 
+    showFlash('Error: ' + err.message, 'error'); 
+  }
+});
+async function previewAndUploadImage(varId, input){
+  const file = input.files[0];
+  if(!file) return;
+  
+  // Show preview immediately
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    document.getElementById(`img-preview-${varId}`).src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  
+  // Upload the image
+  try{
+    const uploadFd = new FormData();
+    uploadFd.append('image', file);
+    uploadFd.append('name', `variation-${varId}`);
+    uploadFd.append('type', 'variation');
+    
+    const uploadRes = await fetch('/api/uploads/variation-image', {
+      method: 'POST',
+      body: uploadFd
+    });
+    const uploadData = await uploadRes.json();
+    if(!uploadData.ok) {
+      showFlash('Image upload failed: ' + uploadData.error, 'error');
+      return;
+    }
+    
+    // Update the variation with new image URL
+    const r = await fetch(`/api/products/${pid}/image-variations/${varId}`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({img_url: uploadData.url})
+    });
+    const d = await r.json();
+    if(!d.ok){ 
+      showFlash('Failed to update image: ' + d.error, 'error'); 
+      return; 
+    }
+    showFlash('Image updated successfully!', 'success');
+    load();
+  }catch(e){ 
+    showFlash('Error: ' + e.message, 'error'); 
+  }
+}
+
+async function updateImgStock(id){
+  const inp=document.getElementById(`img-stock-${id}`);
+  const newStock=parseInt(inp.value);
+  try{
+    const r=await fetch(`/api/products/${pid}/image-variations/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({stock:newStock})});
+    const d=await r.json();
+    if(!d.ok){ showFlash(d.error || 'Error loading variations', 'error'); return; }
+    load();
+    showFlash('Stock updated!', 'success');
+  }catch(e){ showFlash(e.message || String(e), 'error'); }
+}
+function deleteImgVar(id){
+  showConfirmModal(
+    'Delete this image variation? All linked dropdowns will be removed.',
+    async () => {
+      try{
+        const r = await fetch(`/api/products/${pid}/image-variations/${id}`, {method:'DELETE'});
+        const d = await r.json();
+        if(!d.ok){ showFlash(d.error || 'Error deleting image variation', 'error'); return; }
+        showFlash('Image variation deleted!', 'success');
+        load();
+      }catch(e){ showFlash(e.message || String(e), 'error'); }
+    }
+  );
+}
+// Batch dropdown management
+let batchDropdowns = [];
+let currentImgVarId = null;
+let currentImgVarStock = 0;
+
+function openAddDrop(imgVarId){
+  // Get image variation stock
+  fetch(`/api/products/${pid}/variations`)
+    .then(r => r.json())
+    .then(d => {
+      const imgVar = d.image_variations.find(iv => iv.id === imgVarId);
+      if(imgVar) {
+        currentImgVarId = imgVarId;
+        currentImgVarStock = imgVar.stock;
+        document.getElementById('batch-img-var-id').value = imgVarId;
+        document.getElementById('batch-parent-stock').textContent = imgVar.stock;
+        clearBatch();
+        openModal('modal-drop-var');
+      }
+    });
+}
+
+function addToBatch(){
+  console.log('addToBatch called - NOT inserting to database');
+  const attrName = document.getElementById('input-attr-name').value.trim();
+  const attrValue = document.getElementById('input-attr-value').value.trim();
+  const stock = parseInt(document.getElementById('input-stock').value) || 0;
+  
+  if(!attrName || !attrValue) {
+    showFlash('Please fill in attribute name and value', 'error');
+    return;
+  }
+  
+  // Check for duplicates in batch
+  const duplicate = batchDropdowns.find(d => 
+    d.attr_name.toLowerCase() === attrName.toLowerCase() && 
+    d.attr_value.toLowerCase() === attrValue.toLowerCase()
+  );
+  
+  if(duplicate) {
+    showFlash(`Duplicate! "${attrName}: ${attrValue}" is already in the batch list.`, 'error');
+    return;
+  }
+  
+  console.log('Adding to batch:', { attr_name: attrName, attr_value: attrValue, stock: stock });
+  batchDropdowns.push({ attr_name: attrName, attr_value: attrValue, stock: stock });
+  
+  // Clear inputs
+  document.getElementById('input-attr-name').value = '';
+  document.getElementById('input-attr-value').value = '';
+  document.getElementById('input-stock').value = '0';
+  
+  renderBatchList();
+  console.log('Current batch:', batchDropdowns);
+}
+
+function removeFromBatch(index){
+  batchDropdowns.splice(index, 1);
+  renderBatchList();
+}
+
+function renderBatchList(){
+  const list = document.getElementById('batch-list');
+  const totalStock = batchDropdowns.reduce((sum, d) => sum + d.stock, 0);
+  document.getElementById('batch-total-stock').textContent = totalStock;
+  
+  if(batchDropdowns.length === 0) {
+    list.innerHTML = '<p style="padding:15px; text-align:center; color:rgba(255,255,255,0.4); font-size:12px;">No dropdowns added yet</p>';
+    return;
+  }
+  
+  list.innerHTML = batchDropdowns.map((d, i) => `
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.06);">
+      <div style="flex:1;">
+        <strong style="color:#fff; font-size:12px;">${d.attr_name}:</strong>
+        <span style="color:rgba(255,255,255,0.7); font-size:12px;">${d.attr_value}</span>
+      </div>
+      <div style="color:rgba(255,255,255,0.6); font-size:12px; margin-right:10px;">${d.stock} units</div>
+      <button onclick="removeFromBatch(${i})" style="padding:4px 8px; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:4px; cursor:pointer; font-size:11px;">Remove</button>
+    </div>
+  `).join('');
+}
+
+function clearBatch(){
+  batchDropdowns = [];
+  renderBatchList();
+}
+
+async function saveBatchDropdowns(){
+  if(batchDropdowns.length === 0) {
+    showFlash('Please add at least one dropdown', 'error');
+    return;
+  }
+  
+  const totalStock = batchDropdowns.reduce((sum, d) => sum + d.stock, 0);
+  
+  // Note: Database triggers will auto-increase parent stock if needed
+  console.log(`Saving ${batchDropdowns.length} dropdowns with total stock: ${totalStock}`);
+  
+  try {
+    // Insert all dropdowns
+    for(const dropdown of batchDropdowns) {
+      const payload = {
+        img_var_id: currentImgVarId,
+        attr_name: dropdown.attr_name,
+        attr_value: dropdown.attr_value,
+        stock: dropdown.stock
+      };
+      
+      const r = await fetch(`/api/products/${pid}/dropdown-variations`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+      });
+      const d = await r.json();
+      if(!d.ok) {
+        showFlash('Error: ' + d.error, 'error');
+        return;
+      }
+    }
+    
+    showFlash('All dropdowns saved successfully!', 'success');
+    closeModalById('modal-drop-var');
+    clearBatch();
+    load();
+  } catch(e) {
+    showFlash('Error: ' + e.message, 'error');
+  }
+}
+
+function editDrop(id, attrName, attrValue, curStock){
+  document.getElementById('edit-drop-id').value = id;
+  document.getElementById('edit-drop-attr-name').value = attrName;
+  document.getElementById('edit-drop-attr-value').value = attrValue;
+  document.getElementById('edit-drop-stock').value = curStock;
+  openModal('modal-edit-drop-var');
+}
+
+async function saveEditDrop(e){
+  e.preventDefault();
+  const id = document.getElementById('edit-drop-id').value;
+  const attr_name = document.getElementById('edit-drop-attr-name').value.trim();
+  const attr_value = document.getElementById('edit-drop-attr-value').value.trim();
+  const stock = parseInt(document.getElementById('edit-drop-stock').value);
+  
+  if(!attr_name || !attr_value){ showFlash('Please fill in all fields', 'error'); return; }
+  if(isNaN(stock) || stock < 0){ showFlash('Invalid stock value', 'error'); return; }
+  
+  try{
+    const r = await fetch(`/api/products/${pid}/dropdown-variations/${id}`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({attr_name, attr_value, stock})
+    });
+    const d = await r.json();
+    if(!d.ok){ showFlash(d.error || 'Error updating dropdown', 'error'); return; }
+    closeModalById('modal-edit-drop-var');
+    load();
+    showFlash('Dropdown variation updated!', 'success');
+  }catch(e){ showFlash(e.message || String(e), 'error'); }
+}
+function deleteDrop(id){
+  showConfirmModal(
+    'Delete this dropdown variation?',
+    async () => {
+      try{
+        const r = await fetch(`/api/products/${pid}/dropdown-variations/${id}`, {method:'DELETE'});
+        const d = await r.json();
+        if(!d.ok){ showFlash(d.error || 'Error deleting dropdown', 'error'); return; }
+        showFlash('Dropdown variation deleted!', 'success');
+        load();
+      }catch(e){ showFlash(e.message || String(e), 'error'); }
+    }
+  );
+}
+async function updateUnlinkedStock(id){
+  const inp=document.getElementById(`unlinked-stock-${id}`);
+  const stock=parseInt(inp.value);
+  try{
+    const r=await fetch(`/api/products/${pid}/dropdown-variations/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({stock})});
+    const d=await r.json();
+    if(!d.ok){ showFlash(d.error || 'Error loading variations', 'error'); return; }
+    load();
+    showFlash('Updated!', 'success');
+  }catch(e){ showFlash(e.message || String(e), 'error'); }
+}
+load();
+</script>
+</div>
+{% endblock %}

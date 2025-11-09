@@ -1,0 +1,29 @@
+# Core Flask
+Flask==3.0.0
+Werkzeug==3.0.1
+
+# Database
+Flask-MySQLdb==2.0.0
+mysqlclient==2.2.7
+
+# Email
+Flask-Mail==0.9.1
+
+# Security
+Flask-WTF==1.2.1
+WTForms==3.1.1
+Flask-Talisman==1.1.0
+Flask-Limiter==3.5.0
+python-dotenv==1.0.0
+
+# Performance & Caching
+Flask-Caching==2.1.0
+redis==5.0.1
+Flask-Session==0.6.0
+
+# Production Server
+gunicorn==21.2.0
+waitress==3.0.0
+
+# Utilities
+email-validator==2.1.0

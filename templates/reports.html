@@ -1,0 +1,1333 @@
+{% extends 'base.html' %}
+
+{% block title %}Reports{% endblock title %}
+
+{% block content %}
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+  
+  .reports-page { 
+    padding: 0; 
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  .filters-section { 
+    background: linear-gradient(135deg, rgba(5, 150, 105, 0.03) 0%, var(--surface) 100%);
+    border: 1px solid rgba(5, 150, 105, 0.15); 
+    border-radius: 16px; 
+    padding: 20px; 
+    margin-bottom: 20px; 
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); 
+  }
+  .filter-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+  .filter-field { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 180px; }
+  .filter-field label { 
+    font-size: 12px; 
+    color: var(--accent); 
+    font-weight: 700; 
+    text-transform: uppercase; 
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+  }
+  .filter-field input,
+  .filter-field select { 
+    padding: 12px 14px; 
+    background: rgba(255, 255, 255, 0.03); 
+    border: 1px solid rgba(139, 148, 158, 0.2); 
+    border-radius: 12px; 
+    color: var(--text-primary); 
+    font-size: 14px; 
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  .filter-field input:focus,
+  .filter-field select:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: rgba(5, 150, 105, 0.05);
+    box-shadow: none;
+  }
+  .filter-actions { display: flex; gap: 8px; align-items: flex-end; }
+  .filter-btn { 
+    padding: 12px 20px; 
+    border-radius: 12px; 
+    font-size: 13px; 
+    font-weight: 700; 
+    cursor: pointer; 
+    border: none;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    letter-spacing: 0.5px;
+  }
+  .btn-filter { 
+    background: linear-gradient(135deg, #059669 0%, #047857 100%); 
+    color: #fff; 
+  }
+  .btn-filter:hover { 
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.4);
+  }
+  .btn-export { 
+    background: rgba(139, 148, 158, 0.1); 
+    color: var(--text-primary);
+    border: 1px solid rgba(139, 148, 158, 0.2);
+  }
+  .btn-export:hover { 
+    background: rgba(139, 148, 158, 0.2); 
+    transform: translateY(-1px);
+  }
+  
+  /* Export pill button (top-right header) - like Reviews refresh */
+  .btn-export-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 36px;
+    padding: 0 16px;
+    border-radius: 9999px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: transparent;
+    color: #9ca3af;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: none;
+  }
+  .btn-export-pill:hover {
+    background: transparent;
+    border-color: rgba(255,255,255,0.2);
+    color: #9ca3af;
+  }
+  .btn-export-pill i {
+    font-size: 13px;
+  }
+  .date-field { position: relative; }
+  .date-input { 
+    padding-left: 42px !important; 
+    font-weight: 500;
+  }
+  .date-icon { 
+    position: absolute; 
+    left: 14px; 
+    bottom: 13px;
+    color: var(--accent); 
+    pointer-events: none; 
+    font-size: 15px;
+  }
+  .presets { 
+    display: flex; 
+    flex-wrap: wrap; 
+    gap: 10px; 
+    align-items: center;
+  }
+  .preset-chip { 
+    background: rgba(5, 150, 105, 0.08); 
+    color: var(--text-primary); 
+    border: 1px solid rgba(5, 150, 105, 0.2); 
+    padding: 8px 16px; 
+    border-radius: 20px; 
+    font-size: 12px; 
+    font-weight: 600; 
+    cursor: pointer; 
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  .preset-chip:hover { 
+    background: rgba(5, 150, 105, 0.15); 
+    border-color: var(--accent);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(5, 150, 105, 0.2);
+  }
+  .preset-chip:active {
+    transform: translateY(0);
+  }
+  .btn-clear { 
+    background: rgba(239, 68, 68, 0.1); 
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+  }
+  .btn-clear:hover { 
+    background: rgba(239, 68, 68, 0.15); 
+    transform: translateY(-1px);
+  }
+  
+  /* Tabs */
+  .tabs-container { 
+    background: transparent; 
+    border: none;
+    border-radius: 0; 
+    padding: 0; 
+    box-shadow: none; 
+    overflow: visible;
+    position: relative;
+  }
+  
+  .tabs-header { 
+    display: flex; 
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1); 
+    padding: 0; 
+    gap: 0;
+    background: transparent;
+    margin-bottom: 20px;
+  }
+  
+  .tab-btn { 
+    padding: 12px 20px; 
+    background: transparent; 
+    border: none; 
+    color: #94a3b8; 
+    cursor: pointer; 
+    font-size: 13px; 
+    font-weight: 600; 
+    border-bottom: 2px solid transparent; 
+    transition: none;
+    position: relative;
+    letter-spacing: 0px;
+  }
+  
+  .tab-btn.active { 
+    color: #e2e8f0; 
+    border-bottom-color: #e2e8f0;
+    background: transparent;
+  }
+  
+  .tab-btn:hover { 
+    color: #cbd5e1; 
+    background: rgba(255, 255, 255, 0.02);
+  }
+  
+  .tab-content { 
+    display: none; 
+    padding: 0;
+    overflow-x: visible;
+  }
+  
+  .tab-content.active { display: block; }
+  
+  /* Search Controls */
+  .controls-section {
+    margin-bottom: 16px;
+  }
+  
+  .search-box {
+    position: relative;
+    max-width: 500px;
+    width: 100%;
+  }
+  
+  .search-box i {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6b7280;
+    font-size: 14px;
+  }
+  
+  .search-box input {
+    width: 100%;
+    padding: 8px 10px 8px 36px; /* smaller */
+    background: rgba(255, 255, 255, 0.02);
+    border: none; /* borderless */
+    border-radius: 8px;
+    color: #9ca3af;
+    font-size: 13px;
+    transition: none;
+    height: 36px;
+  }
+  
+  .search-box input:focus { outline: none; background: rgba(255,255,255,0.03); }
+  
+  .search-box input::placeholder {
+    color: #64748b;
+  }
+  
+  /* Filters Row */
+  .filters-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  
+  .date-inputs-wrapper {
+    display: flex;
+    gap: 12px;
+  }
+  
+  /* Modern Date Picker Styling */
+  .date-picker-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .date-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.7);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .modern-date-picker {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #fff;
+    padding: 10px 10px 10px 40px;
+    border-radius: 8px;
+    font-size: 14px;
+    width: 100%;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .modern-date-picker:focus {
+    outline: none;
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(59,130,246,0.5);
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+  }
+  .modern-date-picker:hover {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.15);
+  }
+  .modern-date-picker::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    opacity: 0.7;
+    cursor: pointer;
+  }
+  .relative {
+    position: relative;
+  }
+  .absolute {
+    position: absolute;
+  }
+  .inset-y-0 {
+    top: 0;
+    bottom: 0;
+  }
+  .start-0 {
+    left: 0;
+  }
+  .flex {
+    display: flex;
+  }
+  .items-center {
+    align-items: center;
+  }
+  .ps-3 {
+    padding-left: 12px;
+  }
+  .pointer-events-none {
+    pointer-events: none;
+  }
+  .text-gray-400 {
+    color: rgba(255,255,255,0.4);
+  }
+  .w-4 {
+    width: 16px;
+  }
+  .h-4 {
+    height: 16px;
+  }
+  
+  .btn-export-excel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: #10b981;
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .btn-export-excel:focus {
+    outline: none;
+  }
+  
+  .btn-export-excel i {
+    font-size: 14px;
+  }
+  
+  .btn-export-excel:hover {
+    background: #059669;
+    transform: translateY(-1px);
+  }
+  
+  /* Responsive Table Styles */
+  .responsive-table {
+    width: 100%;
+    margin-bottom: 0;
+    border-spacing: 0;
+    font-size: 13px;
+    position: relative;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+  }
+  
+  .responsive-table::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 0px;
+    background: transparent;
+  }
+  
+  .responsive-table thead {
+    /* Accessibly hide thead on narrow viewports */
+    display: none;
+  }
+  
+  @media (min-width: 768px) {
+    .responsive-table thead {
+      /* Unhide thead on wide viewports */
+      display: table-header-group;
+    }
+    
+    .responsive-table thead th {
+      background: var(--sidebar-bg);
+      border: none;
+      border-bottom: 2px solid var(--border);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 16px 12px;
+      color: #9ca3af;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      position: relative;
+      text-align: right;
+    }
+    
+    .responsive-table thead th:first-of-type {
+      text-align: left;
+      padding-left: 20px;
+    }
+  }
+  
+  /* Display block for narrow viewports */
+  .responsive-table tbody,
+  .responsive-table tr,
+  .responsive-table th,
+  .responsive-table td {
+    display: block;
+    padding: 0;
+    text-align: left;
+    white-space: normal;
+  }
+  
+  @media (min-width: 768px) {
+    .responsive-table tr {
+      display: table-row;
+    }
+  }
+  
+  .responsive-table th,
+  .responsive-table td {
+    padding: 12px 14px;
+    vertical-align: middle;
+  }
+  
+  @media (min-width: 768px) {
+    .responsive-table th,
+    .responsive-table td {
+      display: table-cell;
+      padding: 14px 12px;
+    }
+  }
+  
+  .responsive-table tfoot {
+    font-size: 12px;
+    font-weight: 600;
+  }
+  
+  @media (min-width: 768px) {
+    .responsive-table tbody {
+      display: table-row-group;
+    }
+    
+    .responsive-table tbody tr {
+      display: table-row;
+      border-width: 0;
+      transition: none;
+      background: transparent;
+    }
+    
+    .responsive-table tbody tr:hover {
+      background: transparent;
+    }
+    
+    .responsive-table tbody tr:nth-of-type(even) {
+      background: transparent;
+    }
+    
+    .responsive-table tbody tr:nth-of-type(even):hover {
+      background: transparent;
+    }
+  }
+  
+  .responsive-table tbody tr {
+    margin-bottom: 20px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 
+                inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  
+  @media (min-width: 768px) {
+    .responsive-table tbody tr {
+      margin-bottom: 0;
+      border-radius: 0;
+      box-shadow: none;
+      border: none;
+      border-left: none;
+      transition: none;
+      background: transparent !important;
+    }
+    
+    .responsive-table tbody tr:nth-of-type(even) {
+      background: transparent !important;
+    }
+    
+    .responsive-table tbody tr:hover {
+      background: transparent !important;
+    }
+    
+    .responsive-table tbody tr:nth-of-type(even):hover {
+      background: transparent !important;
+    }
+    
+    .responsive-table tbody tr:last-of-type {
+      margin-bottom: 0;
+    }
+  }
+  
+  .responsive-table tbody th[scope="row"] {
+    background: rgba(255, 255, 255, 0.04);
+    color: #e2e8f0;
+    font-weight: 700;
+    padding: 16px 16px;
+    font-size: 15px;
+    letter-spacing: 0px;
+    border-bottom: none;
+  }
+  
+  @media (min-width: 768px) {
+    .responsive-table tbody th[scope="row"] {
+      background: transparent;
+      color: #e2e8f0;
+      text-align: left;
+      border-left: none;
+      border-bottom: none;
+      font-weight: 600;
+      padding-left: 16px;
+      position: relative;
+      font-size: 13px;
+      letter-spacing: 0px;
+    }
+  }
+  
+  .responsive-table tbody td {
+    text-align: right;
+    padding: 14px 16px;
+    color: #e2e8f0;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: none;
+  }
+  
+  @media (min-width: 768px) {
+    .responsive-table tbody td {
+      border-left: none;
+      border-bottom: none;
+      text-align: right;
+      padding: 14px 12px;
+      display: table-cell;
+    }
+    
+    .responsive-table tbody td:last-of-type {
+      border-right: none;
+    }
+  }
+  
+  .responsive-table tbody td[data-type="currency"],
+  .responsive-table tbody td[data-type="number"] {
+    text-align: right;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    color: #e2e8f0;
+  }
+  
+  .responsive-table tbody td[data-type="currency"]::before {
+    content: 'RWF ';
+    font-weight: 600;
+    opacity: 0.7;
+    margin-right: 3px;
+  }
+  
+  .responsive-table tbody td[data-title]:before {
+    content: attr(data-title);
+    float: left;
+    font-size: 11px;
+    color: #9ca3af;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    opacity: 1;
+  }
+  
+  @media (min-width: 768px) {
+    .responsive-table tbody td[data-title]:before {
+      content: none;
+    }
+    
+    .responsive-table tbody td[data-type="currency"]::before {
+      content: none;
+    }
+  }
+  
+  .responsive-table tfoot tr {
+    background: rgba(255, 255, 255, 0.06);
+    border-top: 2px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.2);
+    position: relative;
+  }
+  
+  .responsive-table tfoot td {
+    padding: 18px 16px;
+    font-weight: 700;
+    color: #c4b5a0;
+    font-size: 15px;
+    letter-spacing: 0px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: none;
+  }
+  
+  .responsive-table tfoot td:first-child {
+    padding-left: 16px;
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #c4b5a0;
+  }
+  
+  /* Show mobile tfoot by default, hide desktop */
+  .responsive-table tfoot tr.mobile-tfoot {
+    display: table-row;
+  }
+  .responsive-table tfoot tr.desktop-tfoot {
+    display: none;
+  }
+  
+  /* Desktop tfoot styles */
+  @media (min-width: 768px) {
+    /* Hide mobile, show desktop */
+    .responsive-table tfoot tr.mobile-tfoot {
+      display: none;
+    }
+    .responsive-table tfoot tr.desktop-tfoot {
+      display: table-row;
+    }
+    
+    .responsive-table tfoot tr {
+      background: var(--sidebar-bg);
+      border-top: 2px solid var(--border);
+      box-shadow: none;
+    }
+    
+    .responsive-table tfoot td {
+      display: table-cell;
+      font-size: 13px;
+      padding: 14px 12px;
+      border-bottom: none;
+      background: transparent;
+      border-radius: 0;
+      margin-top: 0;
+      text-align: right;
+    }
+    
+    .responsive-table tfoot td:first-child {
+      font-size: 13px;
+      color: #e6f1f3;
+      text-transform: none;
+      letter-spacing: 0;
+      text-align: left;
+      padding-left: 16px;
+    }
+  }
+  .text-right { text-align: right; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12px; }
+  .stock-status, .status-badge { 
+    display: inline-block; 
+    padding: 2px 6px; 
+    border-radius: 6px; 
+    font-size: 8px; 
+    font-weight: 700; 
+    letter-spacing: 0.2px;
+    text-transform: uppercase;
+    border: none;
+    transition: none;
+    box-shadow: none;
+    white-space: nowrap;
+    cursor: default;
+  }
+  
+  .stock-ok { 
+    background: #10b981;
+    color: #ffffff;
+  }
+  
+  .stock-warning { 
+    background: #f59e0b;
+    color: #ffffff;
+  }
+  
+  .stock-critical { 
+    background: #ef4444;
+    color: #ffffff;
+  }
+  
+  .payment-paid, .payment-success, .payment-completed, .payment-successful {
+    background: #10b981;
+    color: #ffffff;
+  }
+  
+  .payment-cod {
+    background: #14b8a6;
+    color: #ffffff;
+  }
+  
+  .payment-pending, .payment-processing {
+    background: #3b82f6;
+    color: #ffffff;
+  }
+  
+  .payment-failed, .payment-cancelled, .payment-refunded {
+    background: #ef4444;
+    color: #ffffff;
+  }
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; margin-bottom: 16px; }
+  .kpi-card { 
+    background: var(--surface); 
+    border: none;
+    border-radius: 8px; 
+    padding: 12px 16px; 
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  .kpi-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    background: rgba(5, 150, 105, 0.15);
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+  .kpi-content {
+    flex: 1;
+    min-width: 0;
+  }
+  .kpi-label { 
+    color: var(--text-muted); 
+    font-weight: 500; 
+    font-size: 11px; 
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .kpi-value { 
+    font-size: 18px; 
+    font-weight: 700; 
+    color: var(--text-primary);
+    line-height: 1.2;
+  }
+  .kpi-sub { display: none; }
+  .charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+  .chart-title { color: var(--text-muted); font-weight: 700; font-size: 13px; margin-bottom: 8px; }
+  .side-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  .mini-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .mini-table { width: 100%; font-size: 12px; border-collapse: collapse; }
+  .mini-table th, .mini-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  .mini-table th { color: var(--text-muted); font-weight: 700; text-align: left; }
+  @media (max-width: 1024px) { .kpi-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } .charts-grid { grid-template-columns: 1fr; } .mini-grid { grid-template-columns: 1fr; } }
+  
+  /* Pagination button hover effect */
+  .pagination-btn:hover { background: rgba(255,255,255,0.1) !important; color: #e2e8f0 !important; }
+  
+  /* Mobile & Tablet Responsive */
+  @media (max-width: 768px) {
+    .search-box {
+      max-width: 100%;
+    }
+    
+    .filters-row {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+    }
+    
+    .date-inputs-wrapper {
+      flex-direction: column;
+      width: 100%;
+      gap: 10px;
+    }
+    
+    .modern-date-picker {
+      width: 100%;
+      min-width: 100%;
+    }
+    
+    .btn-export-excel {
+      width: 100%;
+    }
+    
+    .tabs-header {
+      overflow-x: visible;
+      -webkit-overflow-scrolling: auto;
+      flex-wrap: wrap;
+    }
+    
+    .tab-btn {
+      white-space: normal;
+      font-size: 13px;
+      padding: 8px 12px;
+      flex: 1;
+      min-width: auto;
+    }
+    
+    .tab-content {
+      overflow-x: visible !important;
+      width: 100%;
+    }
+    
+    .responsive-table {
+      width: 100%;
+      overflow-x: visible;
+    }
+  }
+</style>
+
+<div class="orders-page reports-page">
+  <div class="orders-header d-flex align-items-center justify-content-between mb-3">
+    <h1 class="h5 m-0">Reports</h1>
+    <div class="d-flex gap-2">
+      <button type="button" class="btn-refresh" onclick="location.reload()">
+        <i class="fa-solid fa-rotate-right"></i>
+        Refresh
+      </button>
+      <button type="button" class="btn-export-pill" onclick="exportToExcel()">
+        <i class="fa fa-download"></i>
+        Export
+      </button>
+    </div>
+  </div>
+
+  <!-- Search -->
+  <div class="controls-section">
+    <div class="search-box">
+      <i class="fa fa-search"></i>
+      <input type="text" id="searchInput" placeholder="Search by order ID or customer..." onkeyup="searchTable()" />
+    </div>
+  </div>
+
+  <!-- Filters Row -->
+  <form id="reports-filter-form" class="filters-row" method="get">
+    <div class="date-inputs-wrapper">
+      <div class="date-picker-container">
+        <label class="date-label">FROM</label>
+        <div class="relative">
+          <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
+            <svg class="w-4 h-4 text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M20 4a2 2 0 0 0-2-2h-2V1a1 1 0 0 0-2 0v1h-3V1a1 1 0 0 0-2 0v1H6V1a1 1 0 0 0-2 0v1H2a2 2 0 0 0-2 2v2h20V4ZM0 18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8H0v10Zm5-8h10a1 1 0 0 1 0 2H5a1 1 0 0 1 0-2Z"/>
+            </svg>
+          </div>
+          <input type="date" name="start_date" id="startDate" value="{{ request.args.get('start_date', '') }}" class="modern-date-picker" placeholder="Select date">
+        </div>
+      </div>
+      <div class="date-picker-container">
+        <label class="date-label">TO</label>
+        <div class="relative">
+          <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
+            <svg class="w-4 h-4 text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M20 4a2 2 0 0 0-2-2h-2V1a1 1 0 0 0-2 0v1h-3V1a1 1 0 0 0-2 0v1H6V1a1 1 0 0 0-2 0v1H2a2 2 0 0 0-2 2v2h20V4ZM0 18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8H0v10Zm5-8h10a1 1 0 0 1 0 2H5a1 1 0 0 1 0-2Z"/>
+            </svg>
+          </div>
+          <input type="date" name="end_date" id="endDate" value="{{ request.args.get('end_date', '') }}" class="modern-date-picker" placeholder="Select date">
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <div class="tabs-container">
+    <div class="tabs-header">
+      <button class="tab-btn active" onclick="switchTab('revenue', this)">Revenue Report</button>
+      <button class="tab-btn" onclick="switchTab('payments', this)">Payments Report</button>
+      <button class="tab-btn" onclick="switchTab('inventory', this)">Inventory Report</button>
+    </div>
+
+    <!-- TAB 1: REVENUE REPORT -->
+    <div id="revenue-tab" class="tab-content active">
+      <table class="responsive-table">
+        <thead>
+          <tr>
+            <th scope="col">Date</th>
+            <th scope="col">Orders</th>
+            <th scope="col">Total Revenue</th>
+            <th scope="col">Avg Order Value</th>
+            <th scope="col">Cost</th>
+            <th scope="col">Profit</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if daily_revenue_summary %}
+            {% for row in daily_revenue_summary %}
+            <tr>
+              <th scope="row">{{ row[0].strftime('%b %d, %Y') if row[0] else '—' }}</th>
+              <td data-title="Orders" data-type="number">{{ row[1] }}</td>
+              <td data-title="Total Revenue" data-type="currency">RWF {{ "{:,.2f}".format(row[2]) }}</td>
+              <td data-title="Avg Order Value" data-type="currency">RWF {{ "{:,.2f}".format(row[3]) }}</td>
+              <td data-title="Cost" data-type="currency">RWF {{ "{:,.2f}".format(row[5] or 0) }}</td>
+              <td data-title="Profit" data-type="currency" style="color: {{ '#22c55e' if row[6] > 0 else '#ef4444' if row[6] < 0 else 'inherit' }}; font-weight: 600;">RWF {{ "{:,.2f}".format(row[6] or 0) }}</td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="6" style="text-align: center; padding: 40px 0; display: block;">No data available for selected period</td>
+            </tr>
+          {% endif %}
+        </tbody>
+        {% if daily_revenue_summary %}
+        <tfoot>
+          <!-- Mobile version -->
+          <tr class="mobile-tfoot">
+            <td colspan="6" style="background: rgba(255, 255, 255, 0.06); padding: 20px 16px; border-radius: 12px; display: block; margin-top: 16px;">
+              <div style="color: #e2e8f0; font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px;">GRAND TOTAL</div>
+              <div style="display: flex; justify-content: space-between; padding: 12px 0;">
+                <span style="color: #9ca3af; font-size: 11px; font-weight: 700; text-transform: uppercase;">Orders</span>
+                <span style="color: #e2e8f0; font-size: 15px; font-weight: 700;">{{ total_orders or 0 }}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 12px 0;">
+                <span style="color: #9ca3af; font-size: 11px; font-weight: 700; text-transform: uppercase;">Total Revenue</span>
+                <span style="color: #c4b5a0; font-size: 16px; font-weight: 800;">RWF {{ "{:,.2f}".format(grand_total_revenue or 0) }}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 12px 0;">
+                <span style="color: #9ca3af; font-size: 11px; font-weight: 700; text-transform: uppercase;">Avg Order Value</span>
+                <span style="color: #e2e8f0; font-size: 15px; font-weight: 700;">RWF {{ "{:,.2f}".format(overall_avg_order_value or 0) }}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 12px 0;">
+                <span style="color: #9ca3af; font-size: 11px; font-weight: 700; text-transform: uppercase;">Total Cost</span>
+                <span style="color: #ef4444; font-size: 15px; font-weight: 700;">RWF {{ "{:,.2f}".format(total_cost or 0) }}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 12px 0; border-top: 2px solid rgba(255,255,255,0.1); margin-top: 8px;">
+                <span style="color: #9ca3af; font-size: 11px; font-weight: 700; text-transform: uppercase;">Total Profit</span>
+                <span style="color: {{ '#22c55e' if (total_profit or 0) > 0 else '#ef4444' }}; font-size: 18px; font-weight: 800;">RWF {{ "{:,.2f}".format(total_profit or 0) }}</span>
+              </div>
+            </td>
+          </tr>
+          <!-- Desktop version -->
+          <tr class="desktop-tfoot">
+            <td><strong>GRAND TOTAL</strong></td>
+            <td data-type="number">{{ total_orders or 0 }}</td>
+            <td data-type="currency">RWF {{ "{:,.2f}".format(grand_total_revenue or 0) }}</td>
+            <td data-type="currency">RWF {{ "{:,.2f}".format(overall_avg_order_value or 0) }}</td>
+            <td data-type="currency" style="color: #ef4444; font-weight: 600;">RWF {{ "{:,.2f}".format(total_cost or 0) }}</td>
+            <td data-type="currency" style="color: {{ '#22c55e' if (total_profit or 0) > 0 else '#ef4444' }}; font-weight: 700; font-size: 16px;">RWF {{ "{:,.2f}".format(total_profit or 0) }}</td>
+          </tr>
+        </tfoot>
+        {% endif %}
+      </table>
+      
+      <!-- Pagination for Revenue Report -->
+      {% if revenue_pager and revenue_pager.pages > 1 %}
+      <div style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 20px; padding: 16px 0;">
+        <a href="?page_rev=1{{ '&start_date=' + start_date if start_date else '' }}{{ '&end_date=' + end_date if end_date else '' }}#revenue-tab" 
+           class="pagination-btn" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #9ca3af; text-decoration: none; font-size: 13px;">
+          ← First
+        </a>
+        
+        {% if revenue_pager.page > 1 %}
+        <a href="?page_rev={{ revenue_pager.page - 1 }}{{ '&start_date=' + start_date if start_date else '' }}{{ '&end_date=' + end_date if end_date else '' }}#revenue-tab" 
+           class="pagination-btn" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #9ca3af; text-decoration: none; font-size: 13px;">
+          ← Previous
+        </a>
+        {% endif %}
+        
+        <span style="color: #e2e8f0; font-size: 13px; font-weight: 600;">
+          Page {{ revenue_pager.page }} of {{ revenue_pager.pages }}
+        </span>
+        
+        {% if revenue_pager.page < revenue_pager.pages %}
+        <a href="?page_rev={{ revenue_pager.page + 1 }}{{ '&start_date=' + start_date if start_date else '' }}{{ '&end_date=' + end_date if end_date else '' }}#revenue-tab" 
+           class="pagination-btn" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #9ca3af; text-decoration: none; font-size: 13px;">
+          Next →
+        </a>
+        {% endif %}
+        
+        <a href="?page_rev={{ revenue_pager.pages }}{{ '&start_date=' + start_date if start_date else '' }}{{ '&end_date=' + end_date if end_date else '' }}#revenue-tab" 
+           class="pagination-btn" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #9ca3af; text-decoration: none; font-size: 13px;">
+          Last →
+        </a>
+      </div>
+      <div style="text-align: center; color: #6b7280; font-size: 12px; margin-top: 8px;">
+        Showing {{ revenue_pager.total }} total records
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- TAB 2: PAYMENTS REPORT -->
+    <div id="payments-tab" class="tab-content">
+      <table class="responsive-table">
+        <thead>
+          <tr>
+            <th scope="col">Order ID</th>
+            <th scope="col">Amount</th>
+            <th scope="col">Status</th>
+            <th scope="col">Provider</th>
+            <th scope="col">Phone</th>
+            <th scope="col">Date & Time</th>
+            <th scope="col">Transaction ID</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if payment_details %}
+            {% for payment in payment_details %}
+            <tr>
+              <th scope="row">ORD-{{ payment[0] }}</th>
+              <td data-title="Amount" data-type="currency">RWF {{ "{:,.2f}".format(payment[1]) }}</td>
+              <td data-title="Status">
+                <span class="status-badge payment-{{ payment[2]|lower }}">{{ payment[2]|upper }}</span>
+              </td>
+              <td data-title="Provider">{{ payment[3] or 'N/A' }}</td>
+              <td data-title="Phone">{{ payment[4] or 'N/A' }}</td>
+              <td data-title="Date">{{ payment[5].strftime('%b %d, %H:%M') if payment[5] else '—' }}</td>
+              <td data-title="Transaction ID" class="mono">{{ payment[6] or 'N/A' }}</td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="7" style="text-align: center; padding: 40px 0; display: block;">No payment data available</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+      
+      <!-- Pagination for Payments Report -->
+      {% if payments_pager and payments_pager.pages > 1 %}
+      <div style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 20px; padding: 16px 0;">
+        <a href="?page_pay=1{{ '&start_date=' + start_date if start_date else '' }}{{ '&end_date=' + end_date if end_date else '' }}{{ '&payment_status=' + payment_status if payment_status else '' }}#payments-tab" 
+           class="pagination-btn" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #9ca3af; text-decoration: none; font-size: 13px;">
+          ← First
+        </a>
+        
+        {% if payments_pager.page > 1 %}
+        <a href="?page_pay={{ payments_pager.page - 1 }}{{ '&start_date=' + start_date if start_date else '' }}{{ '&end_date=' + end_date if end_date else '' }}{{ '&payment_status=' + payment_status if payment_status else '' }}#payments-tab" 
+           class="pagination-btn" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #9ca3af; text-decoration: none; font-size: 13px;">
+          ← Previous
+        </a>
+        {% endif %}
+        
+        <span style="color: #e2e8f0; font-size: 13px; font-weight: 600;">
+          Page {{ payments_pager.page }} of {{ payments_pager.pages }}
+        </span>
+        
+        {% if payments_pager.page < payments_pager.pages %}
+        <a href="?page_pay={{ payments_pager.page + 1 }}{{ '&start_date=' + start_date if start_date else '' }}{{ '&end_date=' + end_date if end_date else '' }}{{ '&payment_status=' + payment_status if payment_status else '' }}#payments-tab" 
+           class="pagination-btn" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #9ca3af; text-decoration: none; font-size: 13px;">
+          Next →
+        </a>
+        {% endif %}
+        
+        <a href="?page_pay={{ payments_pager.pages }}{{ '&start_date=' + start_date if start_date else '' }}{{ '&end_date=' + end_date if end_date else '' }}{{ '&payment_status=' + payment_status if payment_status else '' }}#payments-tab" 
+           class="pagination-btn" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #9ca3af; text-decoration: none; font-size: 13px;">
+          Last →
+        </a>
+      </div>
+      <div style="text-align: center; color: #6b7280; font-size: 12px; margin-top: 8px;">
+        Showing {{ payments_pager.total }} total payments
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- TAB 3: INVENTORY REPORT -->
+    <div id="inventory-tab" class="tab-content">
+      <table class="responsive-table">
+        <thead>
+          <tr>
+            <th scope="col">Product Name</th>
+            <th scope="col">Category</th>
+            <th scope="col">Stock</th>
+            <th scope="col">Price</th>
+            <th scope="col">Total Revenue</th>
+            <th scope="col">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if inventory_details %}
+            {% for product in inventory_details %}
+            <tr>
+              <th scope="row">{{ product[0] }}</th>
+              <td data-title="Category">{{ product[1] or 'Uncategorized' }}</td>
+              <td data-title="Stock" data-type="number">{{ product[2] }} units</td>
+              <td data-title="Price" data-type="currency">RWF {{ "{:,.2f}".format(product[3]) }}</td>
+              <td data-title="Total Revenue" data-type="currency">RWF {{ "{:,.2f}".format(product[4]) }}</td>
+              <td data-title="Status">
+                {% if product[2] < 10 %}
+                  <span class="stock-status stock-critical">CRITICAL</span>
+                {% elif product[2] < 20 %}
+                  <span class="stock-status stock-warning">LOW</span>
+                {% else %}
+                  <span class="stock-status stock-ok">OK</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="6" style="text-align: center; padding: 40px 0; display: block;">No inventory data available</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+      
+      <!-- Pagination for Inventory -->
+      {% if inventory_pager and inventory_pager.pages > 1 %}
+      <div style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 20px; padding: 16px 0;">
+        <a href="?page_inv=1{{ '&start_date=' + start_date if start_date else '' }}{{ '&end_date=' + end_date if end_date else '' }}#inventory-tab" 
+           class="pagination-btn" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #9ca3af; text-decoration: none; font-size: 13px;">
+          ← First
+        </a>
+        
+        {% if inventory_pager.page > 1 %}
+        <a href="?page_inv={{ inventory_pager.page - 1 }}{{ '&start_date=' + start_date if start_date else '' }}{{ '&end_date=' + end_date if end_date else '' }}#inventory-tab" 
+           class="pagination-btn" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #9ca3af; text-decoration: none; font-size: 13px;">
+          ← Previous
+        </a>
+        {% endif %}
+        
+        <span style="color: #e2e8f0; font-size: 13px; font-weight: 600;">
+          Page {{ inventory_pager.page }} of {{ inventory_pager.pages }}
+        </span>
+        
+        {% if inventory_pager.page < inventory_pager.pages %}
+        <a href="?page_inv={{ inventory_pager.page + 1 }}{{ '&start_date=' + start_date if start_date else '' }}{{ '&end_date=' + end_date if end_date else '' }}#inventory-tab" 
+           class="pagination-btn" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #9ca3af; text-decoration: none; font-size: 13px;">
+          Next →
+        </a>
+        {% endif %}
+        
+        <a href="?page_inv={{ inventory_pager.pages }}{{ '&start_date=' + start_date if start_date else '' }}{{ '&end_date=' + end_date if end_date else '' }}#inventory-tab" 
+           class="pagination-btn" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #9ca3af; text-decoration: none; font-size: 13px;">
+          Last →
+        </a>
+      </div>
+      <div style="text-align: center; color: #6b7280; font-size: 12px; margin-top: 8px;">
+        Showing {{ inventory_pager.total }} total products
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+// Tab switching
+function switchTab(tabName, el) {
+  try {
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    
+    const tabElement = document.getElementById(tabName + '-tab');
+    if (tabElement) tabElement.classList.add('active');
+    if (el) el.classList.add('active');
+    
+    // Clear search when switching tabs
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+      searchInput.value = '';
+      searchTable();
+    }
+  } catch (error) {
+    console.error('Tab switch error:', error);
+  }
+}
+
+// Auto-submit form when dates change
+function initializeDateFilters() {
+  try {
+    const form = document.getElementById('reports-filter-form');
+    const startDate = document.getElementById('startDate');
+    const endDate = document.getElementById('endDate');
+    
+    if (startDate) {
+      startDate.addEventListener('change', function() {
+        if (form) form.submit();
+      });
+    }
+    
+    if (endDate) {
+      endDate.addEventListener('change', function() {
+        if (form) form.submit();
+      });
+    }
+  } catch (error) {
+    console.error('Date filter init error:', error);
+  }
+}
+
+// Search within current table
+function searchTable() {
+  try {
+    const input = document.getElementById('searchInput');
+    if (!input) return;
+    
+    const filter = input.value.toUpperCase();
+    const activeTab = document.querySelector('.tab-content.active');
+    if (!activeTab) return;
+    
+    const table = activeTab.querySelector('.responsive-table');
+    if (!table) return;
+    
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return;
+    
+    const rows = tbody.getElementsByTagName('tr');
+    
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const cells = row.getElementsByTagName('td');
+      const ths = row.getElementsByTagName('th');
+      let found = false;
+      
+      // Search in th elements
+      for (let th of ths) {
+        if (th.textContent.toUpperCase().indexOf(filter) > -1) {
+          found = true;
+          break;
+        }
+      }
+      
+      // Search in td elements
+      if (!found) {
+        for (let cell of cells) {
+          if (cell.textContent.toUpperCase().indexOf(filter) > -1) {
+            found = true;
+            break;
+          }
+        }
+      }
+      
+      row.style.display = found ? '' : 'none';
+    }
+  } catch (error) {
+    console.error('Search error:', error);
+  }
+}
+
+// Export to Excel
+function exportToExcel() {
+  try {
+    const activeTab = document.querySelector('.tab-content.active');
+    if (!activeTab) return;
+    
+    const table = activeTab.querySelector('.responsive-table');
+    if (!table) return;
+    
+    // Get tab name
+    const tabBtn = document.querySelector('.tab-btn.active');
+    const tabName = tabBtn ? tabBtn.textContent.trim().replace(/ /g, '_') : 'Report';
+    
+    // Create workbook with borders
+    let html = '<table border="1" style="border-collapse: collapse; border: 1px solid black;">';
+    const rows = table.querySelectorAll('tr');
+    
+    rows.forEach((row, index) => {
+      // Skip hidden rows (filtered out by search)
+      if (row.style.display === 'none') return;
+      
+      html += '<tr>';
+      const cells = row.querySelectorAll('th, td');
+      cells.forEach(cell => {
+        const tag = cell.tagName.toLowerCase();
+        let text = cell.innerText.trim();
+        
+        // Remove badge styling, just get text
+        const badge = cell.querySelector('.status-badge, .stock-status');
+        if (badge) {
+          text = badge.innerText.trim();
+        }
+        
+        // Clean currency symbols and special characters for Excel
+        text = text.replace(/€/g, '').replace(/RWF/g, '').replace(/,/g, '').trim();
+        
+        html += `<${tag} style="border: 1px solid black; padding: 5px;">${text}</${tag}>`;
+      });
+      html += '</tr>';
+    });
+    html += '</table>';
+    
+    // Create blob and download
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${tabName}_${new Date().toISOString().split('T')[0]}.xls`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Export error:', error);
+    showFlash('Error exporting to Excel. Please try again.', 'error');
+  }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+  try {
+    // Initialize date filter auto-submit
+    initializeDateFilters();
+    
+    // Check URL hash and switch to appropriate tab
+    const hash = window.location.hash;
+    if (hash === '#inventory-tab') {
+      const inventoryBtn = Array.from(document.querySelectorAll('.tab-btn')).find(btn => 
+        btn.textContent.includes('Inventory')
+      );
+      if (inventoryBtn) {
+        switchTab('inventory', inventoryBtn);
+      }
+    } else if (hash === '#payments-tab') {
+      const paymentsBtn = Array.from(document.querySelectorAll('.tab-btn')).find(btn => 
+        btn.textContent.includes('Payments')
+      );
+      if (paymentsBtn) {
+        switchTab('payments', paymentsBtn);
+      }
+    }
+  } catch (error) {
+    console.error('Initialization error:', error);
+  }
+});
+</script>
+{% endblock %}

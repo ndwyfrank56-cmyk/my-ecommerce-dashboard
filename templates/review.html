@@ -1,0 +1,680 @@
+{% extends 'base.html' %}
+
+{% block title %}Reviews{% endblock title %}
+
+{% block content %}
+<section class="orders-page">
+  <style>
+  /* ROOT FIXES - force single column on mobile, no exceptions */
+  .orders-page .orders-container {
+    padding: 0 6px;
+  }
+  .orders-page .orders-row {
+    display: grid !important;
+    gap: 16px !important;
+    grid-template-columns: 1fr !important; /* MOBILE FIRST */
+    margin: 0 auto;
+  }
+
+  /* Force single column on mobile - no horizontal expansion */
+  @media (max-width: 768px) {
+    .orders-page .orders-container {
+      padding: 0 4px;
+    }
+    .orders-page .orders-row {
+      grid-template-columns: 1fr !important;
+      gap: 8px !important;
+    }
+    .orders-page .orders-row * {
+      min-width: 0 !important;
+    }
+    
+    /* Compact cards on mobile */
+    .orders-page .order-item {
+      padding: 8px !important;
+      border-radius: 10px !important;
+    }
+    
+    .review-top {
+      margin-bottom: 8px !important;
+    }
+    
+    .review-top h4 {
+      font-size: 14px !important;
+    }
+    
+    .review-delete {
+      width: 30px !important;
+      height: 30px !important;
+      font-size: 13px !important;
+    }
+    
+    .userline {
+      font-size: 12px !important;
+      margin-bottom: 4px !important;
+    }
+    
+    .fa-star, .fa-regular.fa-star {
+      font-size: 14px !important;
+    }
+    
+    .d-flex.align-items-center.gap-2 {
+      margin-bottom: 8px !important;
+    }
+    
+    .order-desc {
+      font-size: 13px !important;
+      margin: 6px 0 0 !important;
+      line-height: 1.5 !important;
+    }
+    
+    .read-more-btn {
+      font-size: 12px !important;
+      margin-top: 4px !important;
+    }
+    
+    .admin-reply {
+      padding: 10px !important;
+      margin-top: 10px !important;
+      font-size: 13px !important;
+      border-radius: 10px !important;
+    }
+    
+    .admin-reply .read-toggle {
+      font-size: 12px !important;
+      margin-top: 4px !important;
+    }
+    
+    .reply-row {
+      margin-top: 10px !important;
+      gap: 6px !important;
+    }
+    
+    .reply-input {
+      height: 38px !important;
+      font-size: 13px !important;
+      padding: 0 14px !important;
+      border-radius: 20px !important;
+    }
+    
+    .btn-send-reply {
+      width: 38px !important;
+      height: 38px !important;
+      font-size: 15px !important;
+    }
+  }
+
+  /* Desktop grid - only apply above 768px */
+  @media (min-width: 769px) {
+    .orders-page .orders-row {
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)) !important;
+      gap: 14px !important;
+    }
+  }
+
+  /* CARD STYLE - clean mobile */
+  .orders-page .order-item {
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 12px !important;
+    padding: 12px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+
+  .review-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .review-top h4 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: normal;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .review-delete {
+    width: 34px !important;
+    height: 34px !important;
+    border-radius: 10px !important;
+    background: transparent !important;
+    border: none !important;
+    color: #ef4444 !important;
+    font-size: 14px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: none;
+    box-shadow: none;
+  }
+  .review-delete:hover {
+    background: transparent !important;
+    color: #ef4444 !important;
+    transform: none;
+  }
+
+  .order-body {
+    padding-top: 0 !important;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .userline {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+
+  .d-flex.align-items-center.gap-2 {
+    margin-bottom: 8px !important;
+  }
+  .fa-star, .fa-regular.fa-star {
+    font-size: 16px !important;
+    color: #f7c948 !important;
+  }
+
+  .order-desc {
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+    color: var(--text-primary);
+    margin: 8px 0 0 !important;
+    width: 100%;
+    max-width: 100%;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+  }
+  .order-desc.collapsed {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .read-more-btn {
+    font-size: 13px !important;
+    color: #ffffff !important;
+    margin-top: 6px !important;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  /* Admin reply - beautiful bubble */
+  .admin-reply {
+    background: #f8fafc;
+    color: #1e293b;
+    padding: 10px 12px;
+    border-radius: 12px;
+    margin-top: 12px;
+    font-size: 14px;
+    line-height: 1.5;
+    border: 1px solid #e2e8f0;
+  }
+  .admin-reply .reply-text {
+    word-break: break-word;
+    width: 100%;
+    max-width: 100%;
+    overflow-wrap: break-word;
+    white-space: normal;
+  }
+  .admin-reply.collapsed .reply-text {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .admin-reply .read-toggle {
+    font-size: 13px !important;
+    color: #1e293b !important;
+    margin-top: 6px !important;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  /* Reply input row */
+  .reply-row {
+    margin-top: 12px !important;
+    gap: 8px !important;
+    display: flex;
+    align-items: center;
+  }
+  .reply-input {
+    flex: 1;
+    height: 42px !important;
+    border-radius: 21px !important;
+    padding: 0 16px !important;
+    font-size: 14px !important;
+    background: rgba(255,255,255,0.08) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text-primary) !important;
+    outline: none;
+  }
+  .reply-input::placeholder {
+    color: rgba(255,255,255,0.5);
+  }
+  .reply-input:focus {
+    border-color: rgba(255,255,255,0.2) !important;
+  }
+  .btn-send-reply {
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 50% !important;
+    background: transparent !important;
+    border: none !important;
+    color: var(--text-primary) !important;
+    font-size: 16px !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: none;
+    box-shadow: none;
+  }
+  .btn-send-reply:hover {
+    background: transparent !important;
+    color: var(--text-primary) !important;
+    transform: none;
+  }
+
+  /* Stats grid - 3 columns on one line */
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 6px !important;
+    margin-bottom: 12px;
+  }
+  .stat-card {
+    padding: 8px 10px !important;
+    border-radius: 10px !important;
+  }
+  .stat-number {
+    font-size: 18px !important;
+  }
+  .stat-label {
+    font-size: 10px !important;
+  }
+  .stat-icon {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 14px !important;
+  }
+  .stat-content {
+    gap: 2px !important;
+  }
+
+  /* Header */
+  .orders-header {
+    margin-bottom: 10px !important;
+  }
+  .orders-header h1 {
+    font-size: 18px !important;
+  }
+  .btn-export {
+    font-size: 11px !important;
+    padding: 6px 10px !important;
+  }
+  @media (max-width: 768px) {
+    .orders-header {
+      margin-bottom: 8px !important;
+    }
+    .orders-header h1 {
+      font-size: 16px !important;
+    }
+  }
+
+  /* Filters - bigger for better usability */
+  .filters-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
+    gap: 8px !important;
+    margin-top: 10px;
+    margin-bottom: 10px;
+  }
+  @media (max-width: 640px) {
+    .filters-row {
+      grid-template-columns: 1fr 1fr !important;
+    }
+  }
+  .filter-input, .filter-select {
+    font-size: 13px !important;
+    padding: 10px 8px !important;
+    height: 42px !important;
+    border-radius: 8px !important;
+  }
+  
+  /* Search box - bigger for consistency with filters */
+  .search-box {
+    margin-bottom: 10px;
+  }
+  .search-box input {
+    font-size: 14px !important;
+    padding: 12px 12px 12px 42px !important;
+    height: 46px !important;
+    border-radius: 10px !important;
+  }
+  .search-box i {
+    font-size: 16px !important;
+    left: 14px !important;
+  }
+
+  /* Group meta */
+  .group-meta {
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .h6.m-0 {
+    font-size: 14px;
+    font-weight: 600;
+  }
+  </style>
+  <div class="orders-header d-flex align-items-center justify-content-between mb-3">
+    <h1 class="h5 m-0">Reviews</h1>
+    <div class="d-flex gap-2">
+      <button class="btn-refresh" onclick="location.reload()"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card stat-total">
+      <div class="stat-icon"><i class="fa-solid fa-star"></i></div>
+      <div class="stat-content">
+        <div class="stat-number">{{ stats.total }}</div>
+        <div class="stat-label">Total Reviews</div>
+      </div>
+    </div>
+    <div class="stat-card stat-new">
+      <div class="stat-icon"><i class="fa-solid fa-comment-slash"></i></div>
+      <div class="stat-content">
+        <div class="stat-number">{{ stats.unanswered or 0 }}</div>
+        <div class="stat-label">Unanswered Reviews</div>
+      </div>
+    </div>
+    <div class="stat-card stat-revenue">
+      <div class="stat-icon"><i class="fa-solid fa-star-half-stroke"></i></div>
+      <div class="stat-content">
+        <div class="stat-number">{{ '%.2f'|format(stats.avg_rating or 0.0) }}</div>
+        <div class="stat-label">Average Rating</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls-section">
+    <div class="search-box">
+      <i class="fa fa-search"></i>
+      <input type="text" name="q" value="{{ filters.q or '' }}" placeholder="Search by product, user or text..." form="reviews-filter-form" />
+    </div>
+  </div>
+
+  <form id="reviews-filter-form" class="filters-row" method="get" action="{{ url_for('reviews') }}">
+    <input type="number" class="filter-input" name="min_rating" min="0" max="5" step="1" placeholder="Min Rating" value="{{ filters.min_rating or '' }}" />
+    <input type="number" class="filter-input" name="max_rating" min="0" max="5" step="1" placeholder="Max Rating" value="{{ filters.max_rating or '' }}" />
+
+    <select name="sort" class="filter-select">
+      {% set s = filters.sort or 'newest' %}
+      <option value="newest" {% if s=='newest' %}selected{% endif %}>Newest</option>
+      <option value="oldest" {% if s=='oldest' %}selected{% endif %}>Oldest</option>
+      <option value="rating_high" {% if s=='rating_high' %}selected{% endif %}>Rating: High → Low</option>
+      <option value="rating_low" {% if s=='rating_low' %}selected{% endif %}>Rating: Low → High</option>
+    </select>
+
+    <select name="per_page" class="filter-select">
+      {% set pp = filters.per_page|int if filters.per_page is defined else 12 %}
+      {% for n in [12,20,50,100,200] %}
+      <option value="{{ n }}" {% if pp==n %}selected{% endif %}>Per Page {{ n }}</option>
+      {% endfor %}
+    </select>
+
+    <select name="unanswered" class="filter-select">
+      <option value="" {% if not filters.unanswered %}selected{% endif %}>All Reviews</option>
+      <option value="1" {% if filters.unanswered %}selected{% endif %}>Unanswered Only</option>
+    </select>
+
+  </form>
+
+  <script>
+    (function(){
+      // FIXED: Proper long-text detection + always init on dynamic content
+      window.initReadMore = function(container = document){
+        // Reviews
+        container.querySelectorAll('.order-desc:not([data-bound])').forEach(desc => {
+          const text = desc.textContent.trim();
+          const btn = desc.parentElement.querySelector('.read-more-btn') || 
+                       Object.assign(document.createElement('button'), { 
+                         type:'button', className:'read-more-btn', textContent:'Read more' 
+                       });
+
+          if (text.length > 120) {  // ← 120 chars for better mobile readability
+            desc.classList.add('collapsed');
+            btn.onclick = () => {
+              desc.classList.toggle('collapsed');
+              btn.textContent = desc.classList.contains('collapsed') ? 'Read more' : 'Read less';
+            };
+            if (!btn.parentElement) desc.after(btn);
+          } else {
+            desc.classList.remove('collapsed');
+            if (btn.parentElement) btn.remove();
+          }
+          desc.dataset.bound = '1';
+        });
+
+        // Admin replies
+        container.querySelectorAll('.admin-reply:not([data-bound])').forEach(block => {
+          const textEl = block.querySelector('.reply-text');
+          if (!textEl) return;
+          const text = textEl.textContent.trim();
+          let btn = block.querySelector('.read-toggle');
+          if (!btn) {
+            btn = Object.assign(document.createElement('button'), { 
+              type:'button', className:'read-toggle', textContent:'Read more' 
+            });
+            block.appendChild(btn);
+          }
+
+          if (text.length > 120) {  // ← 120 chars for better mobile readability
+            block.classList.add('collapsed');
+            btn.style.display = 'inline-block';
+            btn.onclick = () => {
+              block.classList.toggle('collapsed');
+              btn.textContent = block.classList.contains('collapsed') ? 'Read more' : 'Read less';
+            };
+          } else {
+            block.classList.remove('collapsed');
+            btn.style.display = 'none';
+          }
+          block.dataset.bound = '1';
+        });
+      };
+
+      // Run on load
+      window.addEventListener('DOMContentLoaded', () => window.initReadMore());
+
+      // Re-run whenever a new reply is added
+      const observer = new MutationObserver(() => window.initReadMore());
+      observer.observe(document.querySelector('.orders-row') || document.body, { childList: true, subtree: true });
+
+      // Auto-submit filters
+      const form = document.getElementById('reviews-filter-form');
+      if(form){
+        form.querySelectorAll('select,input[type=number]').forEach(el=> el.addEventListener('change', ()=>form.submit()));
+        const q = document.querySelector('input[name="q"][form="reviews-filter-form"]');
+        if(q) q.addEventListener('keydown', e=>{ if(e.key==='Enter') form.submit(); });
+      }
+    })();
+  </script>
+  <div class="orders-container">
+    <div class="orders-row">
+      {% for r in reviews %}
+      <div class="order-item">
+        <div class="order-top review-top">
+          <h4>{{ r.product_name }}</h4>
+          <button class="review-delete btn-delete-review" data-id="{{ r.id }}" data-user="{{ r.user_id }}" data-product="{{ r.product_id }}" data-rating="{{ r.rating }}" data-text="{{ r.comment }}" title="Delete review"><i class="fa fa-trash"></i></button>
+        </div>
+        <div class="order-body">
+          <div class="userline">{{ r.user_name }}</div>
+          <div class="d-flex align-items-center gap-2" style="margin-bottom:8px;">
+            <div title="Rating {{ r.rating }} / 5">
+              {% for i in range(1,6) %}
+                {% if i <= (r.rating|round(0,'floor')) %}<i class="fa-solid fa-star" style="color:#f7c948"></i>
+                {% else %}<i class="fa-regular fa-star" style="color:#f7c948"></i>
+                {% endif %}
+              {% endfor %}
+            </div>
+          </div>
+          <div class="order-desc">{{ r.comment }}</div>
+          {% if r.admin_reply %}
+            <div class="admin-reply">
+              <i class="fa fa-reply"></i> <strong style="color:#1a1a1a;">Admin:</strong> <span class="reply-text" style="color:#1a1a1a;">{{ r.admin_reply }}</span>
+              <button type="button" class="read-toggle" style="display:none;">Read more</button>
+            </div>
+          {% endif %}
+          <div class="reply-row" style="display:flex; gap:6px; align-items:center; margin-top:6px;">
+            <input type="text" class="reply-input" placeholder="Reply..." value="" style="flex:1; height:28px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text-primary); padding:0 8px; font-size:12px;" />
+            <button class="btn-send-reply" title="Send reply"><i class="fa fa-paper-plane"></i></button>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="order-item">
+        <div class="order-body">No reviews found.</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div id="confirm-overlay" class="confirm-overlay" style="display:none;">
+    <div class="confirm-modal">
+      <button class="modal-close-btn" id="modal-close-btn">&times;</button>
+      <h3 class="confirm-title" id="confirm-title">Are you sure?</h3>
+      <p class="confirm-message" id="confirm-message">This action cannot be undone.</p>
+      <div class="confirm-buttons">
+        <button class="confirm-btn confirm-cancel" id="confirm-cancel">✕ Cancel</button>
+        <button class="confirm-btn confirm-yes" id="confirm-yes">Yes, Continue</button>
+      </div>
+    </div>
+  </div>
+
+  {% if pagination and pagination.pages > 1 %}
+  <div style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 20px; padding: 16px 0;">
+    {% set base = '?q=' ~ (filters.q or '')
+        ~ '&min_rating=' ~ (filters.min_rating or '')
+        ~ '&max_rating=' ~ (filters.max_rating or '')
+        ~ '&sort=' ~ (filters.sort or '')
+        ~ '&per_page=' ~ (filters.per_page or '')
+        ~ '&product_id=' ~ (filters.product_id or '')
+        ~ '&view=' ~ (filters.view or '')
+        ~ '&unanswered=' ~ (filters.unanswered or '') %}
+    
+    <a href="{{ base }}&page=1" class="pagination-btn" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #9ca3af; text-decoration: none; font-size: 13px;">
+      ← First
+    </a>
+    
+    {% if pagination.page > 1 %}
+    <a href="{{ base }}&page={{ pagination.page - 1 }}" class="pagination-btn" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #9ca3af; text-decoration: none; font-size: 13px;">
+      ← Previous
+    </a>
+    {% endif %}
+    
+    <span style="color: #e2e8f0; font-size: 13px; font-weight: 600;">
+      Page {{ pagination.page }} of {{ pagination.pages }}
+    </span>
+    
+    {% if pagination.page < pagination.pages %}
+    <a href="{{ base }}&page={{ pagination.page + 1 }}" class="pagination-btn" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #9ca3af; text-decoration: none; font-size: 13px;">
+      Next →
+    </a>
+    {% endif %}
+    
+    <a href="{{ base }}&page={{ pagination.pages }}" class="pagination-btn" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #9ca3af; text-decoration: none; font-size: 13px;">
+      Last →
+    </a>
+  </div>
+  <style>
+    .pagination-btn:hover { background: rgba(255,255,255,0.1) !important; color: #e2e8f0 !important; }
+  </style>
+  {% endif %}
+
+</section>
+<script>
+  (function(){
+    document.querySelectorAll('.btn-delete-review').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        if(!confirm('Delete this review?')) return;
+        const payload = {
+          id: Number(btn.getAttribute('data-id')),
+          user_id: Number(btn.getAttribute('data-user')),
+          product_id: Number(btn.getAttribute('data-product')),
+          rating: Number(btn.getAttribute('data-rating')),
+          review: btn.getAttribute('data-text')
+        };
+        try{
+          const res = await fetch('/api/reviews/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+          const data = await res.json();
+          if(!data.ok){ showFlash(data.error||'Failed to delete', 'error'); return; }
+          location.reload();
+        }catch(e){ showFlash(e && e.message || 'Failed', 'error'); }
+      });
+    });
+
+    // Reply handlers
+    document.querySelectorAll('.order-item').forEach(card=>{
+      const delBtn = card.querySelector('.btn-delete-review');
+      const input = card.querySelector('.reply-input');
+      const send = card.querySelector('.btn-send-reply');
+      if(!delBtn || !input || !send) return;
+      const base = {
+        id: Number(delBtn.getAttribute('data-id')),
+        user_id: Number(delBtn.getAttribute('data-user')),
+        product_id: Number(delBtn.getAttribute('data-product')),
+        rating: Number(delBtn.getAttribute('data-rating')),
+        review: delBtn.getAttribute('data-text')
+      };
+      const submit = async ()=>{
+        const reply = (input.value||'').trim();
+        if(!reply) return;
+        try{
+          const res = await fetch('/api/reviews/reply', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({...base, reply}) });
+          const data = await res.json();
+          if(!data.ok){ showFlash(data.error||'Failed to reply', 'error'); return; }
+          let rt = card.querySelector('.reply-text');
+          if(!rt){
+            const wrap = document.createElement('div');
+            wrap.className = 'admin-reply';
+            wrap.innerHTML = '<i class="fa fa-reply"></i> <strong>Admin:</strong> <span class="reply-text"></span><button type="button" class="read-toggle" style="display:none;">Read more</button>';
+            card.querySelector('.order-body').appendChild(wrap);
+            rt = wrap.querySelector('.reply-text');
+            // initialize toggle behavior for this new block after setting text
+          }
+          rt.textContent = reply;
+          // ← THIS IS THE KEY: re-init toggles on the new content
+          (window.initReadMore && window.initReadMore(card));
+          input.value = '';
+        }catch(e){ showFlash(e && e.message || 'Failed', 'error'); }
+      };
+      send.addEventListener('click', submit);
+      input.addEventListener('keydown', e=>{ if(e.key==='Enter'){ submit(); }});
+    });
+  })();
+</script>
+{% endblock %}

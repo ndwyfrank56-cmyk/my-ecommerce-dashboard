@@ -1,0 +1,998 @@
+{% extends 'base.html' %}
+
+{% block title %}Products{% endblock title %}
+
+{% block content %}
+<div style="padding: 4px;">
+<div class="orders-header d-flex align-items-center justify-content-between mb-3">
+  <h1 class="h5 m-0">Products</h1>
+  <div class="d-flex gap-2">
+    <button class="btn-refresh" onclick="location.reload()"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+    <button class="btn-primary action-btn action-primary" id="btn-add-product"><i class="fa fa-plus"></i><span>Add Product</span></button>
+    <button class="btn-assign action-btn action-ghost" id="btn-add-category"><i class="fa fa-folder-plus"></i><span>Add Category</span></button>
+    <button class="btn-print action-btn action-ghost" id="btn-remove-category"><i class="fa fa-folder-minus"></i><span>Remove Category</span></button>
+  </div>
+</div>
+
+<style>
+  .orders-header .action-btn{ display:inline-flex; align-items:center; gap:10px; height:44px; padding:0 16px; border-radius:12px; border:1px solid var(--border); background: var(--surface); color: var(--text-primary); box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset, 0 8px 20px rgba(0,0,0,0.15); font-weight:600; letter-spacing:.2px; }
+  .orders-header .action-btn i{ font-size:16px; }
+  .orders-header .action-btn span{ display:inline-block; }
+  .orders-header .action-btn.action-primary{ background: rgba(255,255,255,0.12); border-color: transparent; color:#e5e7eb; }
+  .orders-header .action-btn.action-primary:hover{ background: rgba(255,255,255,0.18); }
+  .orders-header .action-btn.action-ghost{ background: rgba(255,255,255,0.04); }
+  .orders-header .action-btn.action-ghost:hover{ background: rgba(255,255,255,0.07); }
+  @media (max-width: 640px){ .orders-header .action-btn span{ display:none; } .orders-header .action-btn{ padding:0 12px; } }
+</style>
+
+<!-- Category Modals (match discount/edit modal look) -->
+<style>
+  .cat-modal.x-modal-overlay{ position:fixed; inset:0; align-items:center; justify-content:center; backdrop-filter: blur(3px); background: rgba(0,0,0,0.6); }
+  .cat-modal .x-modal{ max-width: 560px; width: 95vw; background: var(--surface); color: var(--text-primary); border:1px solid var(--border); border-radius:16px; overflow:hidden; box-shadow: 0 24px 64px rgba(0,0,0,0.4); }
+  .cat-modal .x-modal-header{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px; background: var(--surface); border-bottom:1px solid var(--border); }
+  .cat-modal .x-modal-title{ font-weight:600; font-size:18px; color: var(--text-primary); }
+  .cat-modal .x-modal-close{ background: transparent; border:1px solid var(--border); color: var(--text-muted); width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .cat-modal .x-modal-body{ padding:20px; background: var(--surface); }
+  .cat-modal form{ display:grid; gap:14px; }
+  .cat-modal label{ font-size:12px; color: var(--text-muted); }
+  .cat-modal input, .cat-modal select{ width:100%; padding:12px; background: var(--surface); border:1px solid var(--border); color: var(--text-primary); border-radius:10px; font-size:14px; }
+  .cat-modal .actions{ display:flex; gap:10px; justify-content:flex-end; padding-top:6px; }
+  .cat-modal .actions button{ flex:1; min-width:120px; }
+
+  /* Confirmation Modal */
+  .confirm-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    backdrop-filter: blur(8px);
+    animation: fadeIn 0.2s ease;
+  }
+  .confirm-modal {
+    background: rgba(30,30,35,0.98);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 32px 40px;
+    max-width: 420px;
+    width: 90%;
+    box-shadow: 0 25px 70px rgba(0,0,0,0.8);
+    text-align: center;
+    animation: slideUp 0.3s ease;
+  }
+  .confirm-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 12px;
+    margin-top: 0;
+  }
+  .confirm-message {
+    font-size: 14px;
+    color: rgba(255,255,255,0.6);
+    margin-bottom: 28px;
+    line-height: 1.6;
+  }
+  .confirm-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+  }
+  .confirm-btn {
+    padding: 12px 28px;
+    border-radius: 8px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .confirm-cancel {
+    background: rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.5);
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .confirm-yes {
+    background: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.9);
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+</style>
+<div id="cat-create-overlay" class="x-modal-overlay cat-modal" style="display:none;">
+  <div class="x-modal">
+    <div class="x-modal-header">
+      <div class="x-modal-title"><i class="fa fa-tags" style="margin-right:8px;"></i> Add Category</div>
+      <button class="x-modal-close" id="cat-create-close">✕</button>
+    </div>
+    <div class="x-modal-body">
+      <form id="cat-create-form">
+        <div>
+          <label>Name</label>
+          <input type="text" name="name" placeholder="Category name" required />
+        </div>
+        <div class="actions">
+          <button type="button" id="cat-create-cancel" class="btn-print"><i class="fa fa-times"></i>&nbsp;Cancel</button>
+          <button type="submit" class="btn-assign"><i class="fa fa-check"></i>&nbsp;Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+</div>
+
+<!-- Confirmation Modal (for deletes/actions) -->
+<div id="confirm-overlay" class="confirm-overlay" style="display:none;">
+  <div class="confirm-modal">
+    <h3 class="confirm-title" id="confirm-title">Are you sure?</h3>
+    <p class="confirm-message" id="confirm-message">This action cannot be undone.</p>
+    <div class="confirm-buttons">
+      <button class="confirm-btn confirm-cancel" id="confirm-cancel">Cancel</button>
+      <button class="confirm-btn confirm-yes" id="confirm-yes">Yes, Continue</button>
+    </div>
+  </div>
+</div>
+
+<div id="cat-delete-overlay" class="x-modal-overlay cat-modal" style="display:none;">
+  <div class="x-modal">
+    <div class="x-modal-header">
+      <div class="x-modal-title"><i class="fa fa-tags" style="margin-right:8px;"></i> Remove Category</div>
+      <button class="x-modal-close" id="cat-delete-close">✕</button>
+    </div>
+    <div class="x-modal-body">
+      <form id="cat-delete-form">
+        <div>
+          <label>Category</label>
+          <select name="id" id="cat-delete-select">
+            {% for c in categories %}
+            <option value="{{ c.id }}">{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="actions">
+          <button type="button" id="cat-delete-cancel" class="btn-print"><i class="fa fa-times"></i>&nbsp;Cancel</button>
+          <button type="submit" class="btn-assign"><i class="fa fa-trash"></i>&nbsp;Delete</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+</div>
+  </div>
+
+ 
+
+<!-- Reusable Modal for Editing Product -->
+<style>
+  #prod-modal-overlay { align-items: flex-start; padding: 20px 0; overflow-y: auto; }
+  #prod-modal-overlay .x-modal { max-width: 880px; width: 95vw; margin: 0 auto; }
+  #prod-modal-overlay .x-modal-body { background: var(--surface); color: var(--text-primary); max-height: none; overflow: visible; }
+  .prod-edit { display: grid; gap: 16px; }
+  .prod-edit .edit-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 768px){ .prod-edit .edit-grid { grid-template-columns: 1fr; } }
+  .prod-edit .field { display: grid; gap: 6px; }
+  .prod-edit label { font-size: 12px; color: var(--text-muted); }
+  .prod-edit input[type=text],
+  .prod-edit input[type=number],
+  .prod-edit select,
+  .prod-edit textarea { width: 100%; background: var(--surface); border: 1px solid var(--border); color: var(--text-primary); border-radius: 8px; padding: 10px 12px; font-size: 14px; }
+  .prod-edit textarea { min-height: 110px; resize: vertical; }
+  .prod-edit .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .prod-edit .media { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px; display: grid; gap: 10px; }
+  .prod-edit .upload-row { display:flex; align-items:center; gap:10px; }
+  .prod-edit .upload-btn { display:inline-flex; align-items:center; gap:8px; padding:8px 12px; background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); cursor: pointer; }
+  .prod-edit .upload-btn:hover { background: rgba(255,255,255,0.1); }
+  .prod-edit .preview { width: 100%; max-height: 280px; object-fit: contain; border-radius: 8px; background: #111; border: 1px solid var(--border); }
+  .prod-edit .preview[src=""], .prod-edit .preview:not([src]) { display: none; }
+  .prod-edit .actions { display:flex; gap:10px; justify-content:flex-end; padding-top: 8px; }
+  .prod-edit .actions button { width: auto; min-width: 140px; max-width: 200px; }
+  .prod-edit .actions .btn-assign { background: #f3f4f6 !important; color: #1a1a1a !important; }
+  .prod-edit .actions .btn-cancel { background: #e5e7eb !important; color: #1a1a1a !important; }
+</style>
+<div id="prod-modal-overlay" class="x-modal-overlay" style="display:none;">
+  <div class="x-modal">
+    <div class="x-modal-header">
+      <div class="x-modal-title" id="prod-modal-title">Edit Product</div>
+      <button class="x-modal-close" id="prod-modal-close">✕</button>
+    </div>
+    <div class="x-modal-body">
+      <form id="prod-edit-form" class="prod-edit">
+        <input type="hidden" name="id" />
+        <div class="edit-grid">
+          <div class="col col-fields">
+            <div class="field">
+              <label>Name</label>
+              <input type="text" name="name" placeholder="Product name" required />
+            </div>
+            <div class="row-2">
+              <div class="field">
+                <label>Price</label>
+                <input type="number" step="0.01" min="0" name="price" placeholder="0" required />
+              </div>
+              <div class="field">
+                <label>Stock</label>
+                <input type="number" step="1" min="0" name="stock" placeholder="0" required />
+              </div>
+            </div>
+            <div class="row-2">
+              <div class="field">
+                <label>Discount (%)</label>
+                <input type="number" step="0.01" min="0" name="discount" placeholder="0" />
+              </div>
+              <div class="field">
+                <label>Cost of Goods</label>
+                <input type="number" step="0.01" min="0" name="cost_of_goods" placeholder="0" />
+              </div>
+              <div class="field">
+                <label>Category</label>
+                <select name="category_id">
+                  <option value="">Uncategorized</option>
+                  {% for c in categories %}
+                  <option value="{{ c.id }}">{{ c.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label>Description</label>
+              <textarea name="description" rows="4" placeholder="Short description"></textarea>
+            </div>
+          </div>
+          <div class="col col-media">
+            <div class="media">
+              <div class="field">
+                <label>Image URL</label>
+                <input type="text" name="image" id="prod-image-url" placeholder="Paste image URL here" />
+              </div>
+              <div class="upload-row">
+                <label for="prod-image-file" class="upload-btn"><i class="fa fa-upload"></i><span>Upload Image</span></label>
+                <input type="file" id="prod-image-file" accept="image/*" style="display:none;" />
+              </div>
+              <img id="prod-image-preview" class="preview" alt="Preview" />
+            </div>
+          </div>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn-cancel" id="prod-modal-cancel">Cancel</button>
+          <button type="submit" class="btn-assign">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+</div>
+
+<!-- Stats Grid -->
+<div class="stats-grid">
+  <div class="stat-card stat-total">
+    <div class="stat-icon"><i class="fa-solid fa-box"></i></div>
+    <div class="stat-content">
+      <div class="stat-number">{{ stats.total }}</div>
+      <div class="stat-label">Total Products</div>
+    </div>
+  </div>
+  <div class="stat-card stat-pending">
+    <div class="stat-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+    <div class="stat-content">
+      <div class="stat-number">{{ stats.low_stock }}</div>
+      <div class="stat-label">Low Stock</div>
+    </div>
+  </div>
+  <div class="stat-card stat-revenue">
+    <div class="stat-icon"><i class="fa-solid fa-times-circle"></i></div>
+    <div class="stat-content">
+      <div class="stat-number">{{ stats.out_of_stock }}</div>
+      <div class="stat-label">Out of Stock</div>
+    </div>
+  </div>
+</div>
+
+<!-- Product Cards CSS -->
+<style>
+  .products-container{ margin: 20px 0; }
+  .products-row{ display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+  
+  .product-item{ 
+    background: var(--surface); 
+    border: 1px solid var(--border); 
+    border-radius: 8px; 
+    padding: 8px; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 6px;
+  }
+  
+  .product-top{ 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center;
+  }
+  .product-top h4{ 
+    font-size: 10px; 
+    font-weight: 700; 
+    color: var(--text-muted); 
+    margin: 0;
+    letter-spacing: 0.3px;
+  }
+  
+  .stock-badge{ 
+    padding: 2px 6px; 
+    border-radius: 3px; 
+    font-size: 8px; 
+    font-weight: 700; 
+    letter-spacing: 0.3px;
+  }
+  .stock-badge.stock-available{ 
+    background: rgba(16,185,129,0.15); 
+    color: #10b981;
+  }
+  .stock-badge.stock-low{ 
+    background: rgba(245,158,11,0.15); 
+    color: #f59e0b;
+  }
+  .stock-badge.stock-out{ 
+    background: rgba(239,68,68,0.15); 
+    color: #ef4444;
+  }
+  
+  .product-image{ 
+    width: 100%; 
+    height: 120px; 
+    border-radius: 4px; 
+    overflow: hidden; 
+    background: #0a0a0a;
+    border: 1px solid var(--border);
+  }
+  .product-image img{ 
+    width: 100%; 
+    height: 100%; 
+    object-fit: cover;
+  }
+  
+  .product-name{ 
+    font-size: 13px; 
+    font-weight: 700; 
+    color: var(--text-primary); 
+    line-height: 1.1;
+    min-height: 28px;
+    margin: 0;
+  }
+  
+  .product-stock{ 
+    font-size: 14px; 
+    font-weight: 800; 
+    color: #10b981; 
+    text-align: center;
+    padding: 6px;
+    background: rgba(16,185,129,0.08);
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+  }
+  .product-stock.low-stock{ 
+    color: #f59e0b; 
+    background: rgba(245,158,11,0.08);
+  }
+  .product-stock.out-of-stock{ 
+    color: #ef4444; 
+    background: rgba(239,68,68,0.08);
+  }
+  
+  .product-info{ 
+    display: grid; 
+    gap: 3px;
+  }
+  .product-info .info-row{ 
+    display: flex; 
+    justify-content: space-between; 
+    font-size: 11px; 
+    color: var(--text-primary);
+  }
+  .product-info .info-row span{ 
+    color: var(--text-muted); 
+    font-weight: 500;
+  }
+  
+  .product-price{ 
+    font-size: 14px; 
+    font-weight: 800; 
+    color: var(--text-primary); 
+    text-align: center;
+    padding: 6px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+  
+  .no-products-message{ 
+    grid-column: 1 / -1; 
+    text-align: center; 
+    padding: 60px 20px;
+  }
+  .no-products-icon{ 
+    font-size: 48px; 
+    color: var(--text-muted); 
+    margin-bottom: 16px;
+  }
+  .no-products-message h3{ 
+    font-size: 20px; 
+    color: var(--text-primary); 
+    margin-bottom: 8px;
+  }
+  .no-products-message p{ 
+    color: var(--text-muted); 
+    font-size: 14px;
+  }
+  
+  /* Product card action buttons - Equal width twins */
+  .product-item .order-buttons{ gap: 6px; display: flex; }
+  .product-item .order-buttons button{ padding: 10px 18px; font-size: 13px; font-weight: 600; flex: 1; }
+  .product-item .btn-export{ padding: 5px 8px; font-size: 11px; margin-top: 2px !important; }
+  
+  /* Manage Variations Button - Smoky White Style */
+  .btn-manage-variations {
+    width: 100% !important;
+    margin-top: 8px !important;
+    padding: 8px 12px !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    color: var(--text-primary) !important;
+    border-radius: 8px !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    cursor: pointer !important;
+    transition: none !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+  }
+  .btn-manage-variations:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    transform: none !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+  }
+  .btn-manage-variations i {
+    font-size: 13px !important;
+  }
+  
+  /* Responsive text display */
+  /* Mobile (≤480px): Icon only */
+  .btn-manage-variations .btn-text-full,
+  .btn-manage-variations .btn-text-short {
+    display: none;
+  }
+  @media (max-width: 480px) {
+    .btn-manage-variations {
+      padding: 8px !important;
+    }
+  }
+  
+  /* Tablet (481px-768px): Icon + "Variations" */
+  @media (min-width: 481px) and (max-width: 768px) {
+    .btn-manage-variations .btn-text-short {
+      display: inline;
+    }
+  }
+  
+  /* Desktop (≥769px): Icon + "Manage Variations" */
+  @media (min-width: 769px) {
+    .btn-manage-variations .btn-text-full {
+      display: inline;
+    }
+  }
+  
+  /* 🔴 ERROR STATE - Products with variation errors */
+  .product-item.has-errors {
+    background: rgba(239, 68, 68, 0.08);
+    border: 2px solid #ef4444;
+    animation: errorPulse 2s ease-in-out infinite;
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+  }
+  
+  @keyframes errorPulse {
+    0%, 100% {
+      border-color: #ef4444;
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+    }
+    50% {
+      border-color: #dc2626;
+      box-shadow: 0 0 30px rgba(239, 68, 68, 0.5), 0 0 10px rgba(239, 68, 68, 0.3) inset;
+    }
+  }
+  
+  .stock-badge.stock-error {
+    background: #ef4444;
+    color: #ffffff;
+    animation: errorBeep 1.5s ease-in-out infinite;
+    font-weight: 800;
+  }
+  
+  @keyframes errorBeep {
+    0%, 100% {
+      background: #ef4444;
+    }
+    50% {
+      background: #dc2626;
+    }
+  }
+  
+  .variation-error-box {
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    border-left: 3px solid #ef4444;
+    border-radius: 4px;
+    padding: 8px;
+    font-size: 9px;
+    line-height: 1.4;
+  }
+  
+  .variation-error-box .error-header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #ef4444;
+    font-weight: 800;
+    margin-bottom: 6px;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .variation-error-box .error-header i {
+    font-size: 10px;
+  }
+  
+  .variation-error-box .error-item {
+    color: #fca5a5;
+    margin-bottom: 3px;
+    padding-left: 8px;
+    display: flex;
+    align-items: flex-start;
+  }
+  
+  .variation-error-box .error-item:last-child {
+    margin-bottom: 0;
+  }
+</style>
+
+<!-- Search (match orders toolbar) -->
+<div class="controls-section">
+  <div class="search-box">
+    <i class="fa fa-search"></i>
+    <input type="text" name="q" value="{{ filters.q or '' }}" placeholder="Search products..." form="products-filter-form" />
+  </div>
+  </div>
+
+<!-- Filters row (same classes as orders) -->
+<form id="products-filter-form" class="filters-row" method="get" action="{{ url_for('products') }}">
+  <div class="select">
+    <select name="category" class="filter-select category-select">
+      <option value="" {% if not filters.category %}selected{% endif %}>All Categories</option>
+      {% for c in categories %}
+      <option value="{{ c.id }}" {% if filters.category|string == c.id|string %}selected{% endif %}>{{ c.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <select name="stock" class="filter-select">
+    {% set sf = (filters.stock or '') %}
+    <option value="" {% if not sf %}selected{% endif %}>Stock: All</option>
+    <option value="in" {% if sf=='in' %}selected{% endif %}>In Stock</option>
+    <option value="low" {% if sf=='low' %}selected{% endif %}>Low Stock</option>
+    <option value="out" {% if sf=='out' %}selected{% endif %}>Out of Stock</option>
+  </select>
+
+  <input type="number" name="min_price" class="filter-input" step="1" min="0" value="{{ filters.min_price or '' }}" placeholder="Min Price" />
+  <input type="number" name="max_price" class="filter-input" step="1" min="0" value="{{ filters.max_price or '' }}" placeholder="Max Price" />
+
+  <select name="sort" class="filter-select">
+    <option value="newest" {% if filters.sort=='newest' %}selected{% endif %}>Newest</option>
+    <option value="name" {% if filters.sort=='name' %}selected{% endif %}>Name (A–Z)</option>
+    <option value="price_low" {% if filters.sort=='price_low' %}selected{% endif %}>Price: Low → High</option>
+    <option value="price_high" {% if filters.sort=='price_high' %}selected{% endif %}>Price: High → Low</option>
+    <option value="sales_count" {% if filters.sort=='sales_count' %}selected{% endif %}>Sales: Count (desc)</option>
+    
+  </select>
+
+  <select name="sales_days" class="filter-select">
+    {% set sd = (filters.sales_days or '') %}
+    <option value="" {% if not sd %}selected{% endif %}>All Time</option>
+    <option value="7" {% if sd=='7' %}selected{% endif %}>Last 7 days</option>
+    <option value="30" {% if sd=='30' %}selected{% endif %}>Last 30 days</option>
+    <option value="90" {% if sd=='90' %}selected{% endif %}>Last 90 days</option>
+    <option value="365" {% if sd=='365' %}selected{% endif %}>Last 365 days</option>
+  </select>
+
+  <input type="number" name="sales_year" class="filter-input" min="2000" max="2100" step="1" value="{{ filters.sales_year or '' }}" placeholder="Year (e.g., 2025)" />
+
+  <input type="number" name="min_sales" class="filter-input" step="1" min="0" value="{{ filters.min_sales or '' }}" placeholder="Min Sales Cnt" />
+  <input type="number" name="max_sales" class="filter-input" step="1" min="0" value="{{ filters.max_sales or '' }}" placeholder="Max Sales Cnt" />
+  
+
+  <select name="per_page" class="filter-select">
+    {% set pp = filters.per_page|int %}
+    {% for n in [12,20,50,100,200,500] %}
+    <option value="{{ n }}" {% if pp==n %}selected{% endif %}>Per Page {{ n }}</option>
+    {% endfor %}
+  </select>
+</form>
+
+<script>
+  (function(){
+    const form = document.getElementById('products-filter-form');
+    if (!form) return;
+    form.querySelectorAll('select,input[type=number]').forEach(el => {
+      el.addEventListener('change', () => form.submit());
+    });
+    const q = document.querySelector('input[name="q"][form="products-filter-form"]');
+    if (q) q.addEventListener('keydown', e => { if (e.key === 'Enter') form.submit(); });
+  })();
+
+  // Category modals
+  (function(){
+    const createOv = document.getElementById('cat-create-overlay');
+    const delOv = document.getElementById('cat-delete-overlay');
+    const addBtn = document.getElementById('btn-add-category');
+    const remBtn = document.getElementById('btn-remove-category');
+    const cClose = document.getElementById('cat-create-close');
+    const cCancel = document.getElementById('cat-create-cancel');
+    const dClose = document.getElementById('cat-delete-close');
+    const dCancel = document.getElementById('cat-delete-cancel');
+    const cForm = document.getElementById('cat-create-form');
+    const dForm = document.getElementById('cat-delete-form');
+    const dSelect = document.getElementById('cat-delete-select');
+
+    function open(el){ el.style.display='flex'; }
+    function close(el){ el.style.display='none'; }
+
+    if(addBtn) addBtn.addEventListener('click', ()=> open(createOv));
+    if(remBtn) remBtn.addEventListener('click', ()=> open(delOv));
+    if(cClose) cClose.addEventListener('click', ()=> close(createOv));
+    if(cCancel) cCancel.addEventListener('click', ()=> close(createOv));
+    if(dClose) dClose.addEventListener('click', ()=> close(delOv));
+    if(dCancel) dCancel.addEventListener('click', ()=> close(delOv));
+
+    if(cForm){
+      cForm.addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        const name = cForm.name.value.trim();
+        if(!name) return;
+        try{
+          const res = await fetch('/api/categories/create', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name }) });
+          const data = await res.json();
+          if(!data.ok){ showFlash(data.error||'Failed', 'error'); return; }
+          close(createOv);
+          location.reload();
+        }catch(err){ showFlash(err && err.message || 'Failed', 'error'); }
+      });
+    }
+
+    if(dForm){
+      dForm.addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        const idEl = dForm.querySelector('select[name="id"]');
+        const id = idEl ? idEl.value : '';
+        if(!id){ showFlash('Select a category to remove', 'warning'); return; }
+        showConfirm(
+          'Delete Category?',
+          'This category will be deleted and products will be detached from it. This action cannot be undone.',
+          async () => {
+            try{
+              const res = await fetch('/api/categories/delete', { method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({ id }) });
+              let data;
+              try{ data = await res.json(); }
+              catch(_){ const txt = await res.text(); throw new Error(txt || 'Request failed'); }
+              if(!data.ok){ showFlash(data.error||'Failed', 'error'); return; }
+              close(delOv);
+              location.reload();
+            }catch(err){ showFlash(err && err.message || 'Failed', 'error'); }
+          }
+        );
+      });
+    }
+  })();
+  </script>
+
+<!-- Products Cards Grid -->
+<div class="products-container">
+  <div class="products-row">
+    {% for p in products %}
+    <div class="product-item {% if p.has_variation_errors %}has-errors{% elif p.stock_status == 'low' %}low-stock{% elif p.stock_status == 'out' %}out-of-stock{% endif %}">
+      <div class="product-top">
+        <h4>PRD-{{ "%03d"|format(p.id) }}</h4>
+        {% if p.has_variation_errors %}
+        <span class="stock-badge stock-error"><i class="fa fa-exclamation-triangle"></i> ERROR</span>
+        {% else %}
+        <span class="stock-badge stock-{{ p.stock_status }}">{{ p.stock_badge }}</span>
+        {% endif %}
+      </div>
+      
+      <div class="product-image">
+        {% if p.image %}
+          {% set img_url = p.image.replace('/static/images/', '/images/') if p.image.startswith('/static/') else p.image %}
+          <img src="{{ img_url }}" alt="{{ p.name }}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 200%22%3E%3Crect fill=%22%23374151%22 width=%22200%22 height=%22200%22/%3E%3Ctext fill=%22%23fff%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-size=%2216%22%3ENo Image%3C/text%3E%3C/svg%3E';">
+        {% else %}
+          <img src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 200%22%3E%3Crect fill=%22%23374151%22 width=%22200%22 height=%22200%22/%3E%3Ctext fill=%22%23fff%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-size=%2216%22%3ENo Image%3C/text%3E%3C/svg%3E" alt="No image available">
+        {% endif %}
+      </div>
+
+      <div class="product-name">{{ p.name }}</div>
+      
+      {% if p.has_variation_errors %}
+      <div class="variation-error-box">
+        <div class="error-header">
+          <i class="fa fa-exclamation-circle"></i>
+          <strong>VARIATION ERRORS</strong>
+        </div>
+        {% for error in p.variation_errors %}
+        <div class="error-item">
+          <i class="fa fa-circle" style="font-size: 4px; margin-right: 4px;"></i>
+          {{ error }}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      
+      <!-- 🎯 STOCK COUNT - MOST PROMINENT -->
+      <div class="product-stock {% if p.stock_status == 'low' %}low-stock{% elif p.stock_status == 'out' %}out-of-stock{% endif %}">
+        {{ p.stock }} UNITS
+      </div>
+      
+      <div class="product-info">
+        <div class="info-row">
+          <span>Sales:</span> {{ p.sales_count or 0 }}{% if filters.sales_year %} ({{ filters.sales_year }}){% elif filters.sales_days %} ({{ filters.sales_days }}d){% endif %}
+        </div>
+      </div>
+      
+      <div class="product-price">
+        RWF {{ "{:,.0f}".format(p.price) }}
+      </div>
+      
+      <!-- Card actions -->
+      <div class="order-buttons">
+        <button class="btn-assign btn-edit" data-pid="{{ p.id }}">Edit</button>
+        <button class="btn-print btn-delete" data-pid="{{ p.id }}">Delete</button>
+      </div>
+      
+      <button class="btn-manage-variations" onclick="window.location.href='/products/{{ p.id }}/variations'">
+        <i class="fa fa-sliders"></i>
+        <span class="btn-text-short">Variations</span>
+        <span class="btn-text-full">Manage Variations</span>
+      </button>
+    </div>
+    {% else %}
+    <!-- No products found message -->
+    <div class="no-products-message">
+      <div class="no-products-icon">
+        <i class="fa-solid fa-box-open"></i>
+      </div>
+      <h3>No Products Found</h3>
+      <p>Try adjusting your search or filter criteria.</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% if pagination and pagination.pages > 1 %}
+<div style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 20px; padding: 16px 0;">
+  {% set base = '?q=' ~ (filters.q or '')
+      ~ '&category=' ~ (filters.category or '')
+      ~ '&min_price=' ~ (filters.min_price or '')
+      ~ '&max_price=' ~ (filters.max_price or '')
+      ~ '&sort=' ~ (filters.sort or '')
+      ~ '&stock=' ~ (filters.stock or '')
+      ~ '&min_sales=' ~ (filters.min_sales or '')
+      ~ '&max_sales=' ~ (filters.max_sales or '')
+      ~ '&sales_days=' ~ (filters.sales_days or '')
+      ~ '&sales_year=' ~ (filters.sales_year or '')
+      ~ '&per_page=' ~ (filters.per_page or '') %}
+  
+  <a href="{{ base }}&page=1" class="pagination-btn" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #9ca3af; text-decoration: none; font-size: 13px;">
+    ← First
+  </a>
+  
+  {% if pagination.page > 1 %}
+  <a href="{{ base }}&page={{ pagination.page - 1 }}" class="pagination-btn" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #9ca3af; text-decoration: none; font-size: 13px;">
+    ← Previous
+  </a>
+  {% endif %}
+  
+  <span style="color: #e2e8f0; font-size: 13px; font-weight: 600;">
+    Page {{ pagination.page }} of {{ pagination.pages }}
+  </span>
+  
+  {% if pagination.page < pagination.pages %}
+  <a href="{{ base }}&page={{ pagination.page + 1 }}" class="pagination-btn" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #9ca3af; text-decoration: none; font-size: 13px;">
+    Next →
+  </a>
+  {% endif %}
+  
+  <a href="{{ base }}&page={{ pagination.pages }}" class="pagination-btn" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #9ca3af; text-decoration: none; font-size: 13px;">
+    Last →
+  </a>
+</div>
+<style>
+  .pagination-btn:hover { background: rgba(255,255,255,0.1) !important; color: #e2e8f0 !important; }
+</style>
+{% endif %}
+
+<script>
+  // Confirmation modal functions
+  (function(){
+    const confirmOverlay = document.getElementById('confirm-overlay');
+    const confirmTitle = document.getElementById('confirm-title');
+    const confirmMessage = document.getElementById('confirm-message');
+    const confirmYes = document.getElementById('confirm-yes');
+    const confirmCancel = document.getElementById('confirm-cancel');
+    let confirmCallback = null;
+
+    window.showConfirm = function(title, message, callback){
+      confirmTitle.textContent = title;
+      confirmMessage.textContent = message;
+      confirmCallback = callback;
+      confirmOverlay.style.display = 'flex';
+    }
+
+    function hideConfirm(){
+      confirmOverlay.style.display = 'none';
+      confirmCallback = null;
+    }
+
+    confirmYes.addEventListener('click', () => {
+      if(confirmCallback) confirmCallback();
+      hideConfirm();
+    });
+
+    confirmCancel.addEventListener('click', hideConfirm);
+  })();
+
+  (function(){
+    const overlay = document.getElementById('prod-modal-overlay');
+    const closeBtn = document.getElementById('prod-modal-close');
+    const cancelBtn = document.getElementById('prod-modal-cancel');
+    const titleEl = document.getElementById('prod-modal-title');
+    const form = document.getElementById('prod-edit-form');
+    const fileInput = document.getElementById('prod-image-file');
+    const imgPreview = document.getElementById('prod-image-preview');
+    const addBtn = document.getElementById('btn-add-product');
+
+    function openModal(){ overlay.style.display='flex'; }
+    function closeModal(){ overlay.style.display='none'; form.reset(); if(imgPreview) imgPreview.src=''; }
+    closeBtn.addEventListener('click', closeModal);
+    if(cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+    // Add Product handler (opens empty form)
+    if (addBtn){
+      addBtn.addEventListener('click', () => {
+        form.reset();
+        if (form.id) form.id.value = '';
+        if (imgPreview) imgPreview.src = '';
+        titleEl.textContent = 'Add Product';
+        openModal();
+      });
+    }
+
+    async function loadProduct(pid){
+      const res = await fetch(`/api/products/${pid}`);
+      const data = await res.json();
+      if(!data.ok) throw new Error(data.error||'Failed to load product');
+      const p = data.product;
+      form.id.value = p.id;
+      form.name.value = p.name||'';
+      form.price.value = p.price!=null? p.price: '';
+      form.stock.value = p.stock!=null? p.stock: '';
+      form.discount.value = p.discount!=null? p.discount: '';
+      if (form.cost_of_goods) form.cost_of_goods.value = p.cost_of_goods!=null? p.cost_of_goods: '';
+      form.image.value = p.image||'';
+      form.description.value = p.description||'';
+      if (form.category_id) form.category_id.value = p.category_id!=null? String(p.category_id): '';
+      if (imgPreview){
+        // Convert /static/images/ to /images/ for dashboard
+        let imgUrl = p.image || '';
+        if (imgUrl.startsWith('/static/')) {
+          imgUrl = imgUrl.replace('/static/images/', '/images/');
+        }
+        imgPreview.src = imgUrl;
+      }
+    }
+
+    // Open handlers
+    document.querySelectorAll('.product-item .btn-edit[data-pid]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const pid = btn.getAttribute('data-pid');
+        titleEl.textContent = `Edit Product #${pid}`;
+        try{
+          await loadProduct(pid);
+          openModal();
+        }catch(e){ showFlash(e.message||e, 'error'); }
+      });
+    });
+
+    // DELETE HANDLER
+    document.querySelectorAll('.product-item .btn-delete[data-pid]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const pid = btn.getAttribute('data-pid');
+        showConfirm(
+          'Delete Product?',
+          `Product #${pid} will be permanently deleted. This action cannot be undone.`,
+          async () => {
+            try{
+              const res = await fetch(`/api/products/${pid}/delete`, { method: 'POST' });
+              const data = await res.json();
+              if(!data.ok){ showFlash(data.error||'Failed to delete', 'error'); return; }
+              const card = btn.closest('.product-item');
+              if(card) card.remove();
+            }catch(err){ showFlash(err.message||err, 'error'); }
+          }
+        );
+      });
+    });
+
+    // Submit handler (create if no id, update otherwise)
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const pid = (form.id && form.id.value) ? form.id.value : '';
+      const payload = {
+        name: form.name.value.trim(),
+        price: Number(form.price.value||0),
+        image: form.image.value.trim(),
+        category_id: form.category_id ? (form.category_id.value||null) : null,
+        stock: Number(form.stock.value||0),
+        description: form.description.value.trim(),
+        discount: Number(form.discount.value||0),
+        cost_of_goods: form.cost_of_goods ? Number(form.cost_of_goods.value||0) : null
+      };
+      try{
+        const url = pid ? `/api/products/${pid}/update` : `/api/products/create`;
+        const res = await fetch(url,{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        const data = await res.json();
+        if(!data.ok){ showFlash(data.error||'Failed to update', 'error'); return; }
+        // For simplicity, refresh to reflect newly added/updated product cards
+        closeModal();
+        window.location.reload();
+      }catch(err){ showFlash(err.message||err, 'error'); }
+    });
+
+    // Upload handler
+    if(fileInput){
+      fileInput.addEventListener('change', async () => {
+        const f = fileInput.files && fileInput.files[0];
+        if(!f) return;
+        try{
+          const fd = new FormData();
+          fd.append('image', f);
+          fd.append('name', form.name.value || `product-${form.id.value||''}`);
+          const res = await fetch('/api/uploads/product-image', { method:'POST', body: fd });
+          const data = await res.json();
+          if(!data.ok){ showFlash(data.error||'Upload failed', 'error'); return; }
+          form.image.value = data.url;
+          if (imgPreview) imgPreview.src = data.url;
+        }catch(err){ showFlash(err.message||err, 'error'); }
+      });
+    }
+
+    // Image URL input handler - show preview when URL is pasted/typed
+    const imageUrlInput = document.getElementById('prod-image-url');
+    if(imageUrlInput && imgPreview){
+      imageUrlInput.addEventListener('input', () => {
+        const url = imageUrlInput.value.trim();
+        imgPreview.src = url;
+      });
+    }
+  })();
+</script>
+</div>
+{% endblock %}
