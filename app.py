@@ -5893,8 +5893,12 @@ def login():
                 return redirect('/login')
                 
         except Exception as e:
+            import traceback
+            error_details = traceback.format_exc()
             print(f"Login error: {e}")
-            flash(f'Login error: {str(e)}', 'error')
+            print(f"Error type: {type(e).__name__}")
+            print(f"Full traceback:\n{error_details}")
+            flash(f'Database connection error. Please contact administrator.', 'error')
             return redirect('/login')
     
     # GET request - show login form
