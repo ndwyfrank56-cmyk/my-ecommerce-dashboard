@@ -51,11 +51,38 @@ app.config['MAIL_USE_SSL'] = os.getenv('MAIL_USE_SSL', 'True') == 'True'
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_USERNAME')
 mail = Mail(app)
 
-# Database Configuration
-app.config['MYSQL_HOST'] = os.getenv('DB_HOST', 'localhost')
-app.config['MYSQL_USER'] = os.getenv('DB_USER', 'root')
-app.config['MYSQL_PASSWORD'] = os.getenv('DB_PASSWORD', '')
-app.config['MYSQL_DB'] = os.getenv('DB_NAME', 'ecommerce')
+# Database Configuration - MUST MATCH WEBSITE VARIABLE NAMES
+app.config['MYSQL_HOST'] = os.getenv('MYSQL_HOST', 'localhost')
+app.config['MYSQL_USER'] = os.getenv('MYSQL_USER', 'root')
+app.config['MYSQL_PASSWORD'] = os.getenv('MYSQL_PASSWORD', '')
+app.config['MYSQL_DB'] = os.getenv('MYSQL_DB', 'ecommerce')
+app.config['MYSQL_PORT'] = int(os.getenv('MYSQL_PORT', '3306'))
+
+# DEBUG: Print database config (password masked)
+print("="*50)
+print("DATABASE CONFIGURATION:")
+print(f"MYSQL_HOST: {app.config['MYSQL_HOST']}")
+print(f"MYSQL_PORT: {app.config['MYSQL_PORT']}")
+print(f"MYSQL_USER: {app.config['MYSQL_USER']}")
+print(f"MYSQL_DB: {app.config['MYSQL_DB']}")
+print(f"MYSQL_PASSWORD: {'***SET***' if app.config['MYSQL_PASSWORD'] else '***EMPTY***'}")
+print("="*50)
+
+# Connection timeout for cloud databases
+app.config['MYSQL_CONNECT_TIMEOUT'] = 30
+app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
+
+# SSL Configuration - Railway proxy connections DON'T need SSL
+# Only enable if explicitly set to True in environment
+if os.getenv('DB_SSL', 'False') == 'True':
+    import ssl as ssl_module
+    app.config['MYSQL_SSL'] = {
+        'check_hostname': False,
+        'verify_mode': ssl_module.CERT_NONE
+    }
+# Note: Railway's TCP proxy (*.proxy.rlwy.net) handles SSL internally
+# External connections to Railway MySQL proxy should NOT use SSL
+
 mysql = MySQL(app)
 
 # Initialize CSRF Protection
