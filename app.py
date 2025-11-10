@@ -70,7 +70,7 @@ print("="*50)
 
 # Connection timeout for cloud databases
 app.config['MYSQL_CONNECT_TIMEOUT'] = 30
-app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
+# Note: Using default cursor (tuple-based) to match existing code that uses user[0], user[1], etc.
 
 # SSL Configuration - Railway proxy connections DON'T need SSL
 # Only enable if explicitly set to True in environment
