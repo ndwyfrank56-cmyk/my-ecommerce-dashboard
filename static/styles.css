@@ -1768,8 +1768,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 /* Different smoky-white shades per button */
 .btn-accept { background: #f9fafb; border: none; }
-.btn-assign { background: transparent; border: none; }
-.btn-print  { background: transparent; border: none; }
+.btn-assign { background: rgba(255,255,255,0.9); border: 1px solid rgba(255,255,255,0.3); }
+.btn-print  { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.15); }
 
 /* Product card edit and delete buttons - make them visible */
 .product-item .btn-edit.btn-assign { 
