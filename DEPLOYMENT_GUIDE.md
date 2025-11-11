@@ -50,7 +50,7 @@ DB_HOST=<copy-from-website>
 DB_USER=<copy-from-website>
 DB_PASSWORD=<copy-from-website>
 DB_NAME=ecommerce
-DB_PORT=3306
+DB_PORT=<copy-from-website-or-use-3306>
 
 # Email
 MAIL_SERVER=smtp.gmail.com
@@ -75,8 +75,12 @@ RATELIMIT_STORAGE_URL=memory://
 
 1. In Render dashboard, click your **My-E-commerce-Website** service
 2. Go to **Environment** tab
-3. Copy: `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
+3. Copy: `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_PORT`
 4. Paste into dashboard's environment variables
+
+**Important for Railway/External Databases:**
+- Always copy the exact `DB_PORT` value (Railway uses non-standard ports)
+- Verify `DB_HOST` includes the full proxy address
 
 ### Step 6: Deploy!
 
@@ -113,9 +117,11 @@ After deployment:
 - Check `requirements.txt` has all dependencies
 - Check Python version in `runtime.txt`
 
-### Database connection error
-- Verify DB credentials match your website exactly
-- Check DB_PORT is 3306
+### Database connection error (Can't connect to server)
+- **CRITICAL:** Verify `DB_PORT` environment variable is set correctly
+- For Railway databases, copy the exact port number from your database config
+- Verify all DB credentials (`DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_PORT`) match your website exactly
+- Check that `DB_HOST` includes the full proxy address (e.g., `caboose.proxy.rlwy.net`)
 
 ### "Application failed to respond"
 - Check logs in Render dashboard

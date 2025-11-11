@@ -1800,6 +1800,70 @@ def api_reply_review():
             pass
         return jsonify({'ok': False, 'error': str(e)}), 500
 
+# Create/submit a new review (for customers on ecommerce site)
+@app.route('/api/reviews', methods=['POST'])
+@csrf.exempt
+def api_create_review():
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+        user_id = data.get('user_id')
+        product_id = data.get('product_id')
+        rating = data.get('rating')
+        review_text = (data.get('review') or data.get('comment') or '').strip()
+        
+        # Validation
+        if not user_id or not product_id:
+            return jsonify({'ok': False, 'error': 'user_id and product_id are required'}), 400
+        if not rating or not (1 <= int(rating) <= 5):
+            return jsonify({'ok': False, 'error': 'rating must be between 1 and 5'}), 400
+        if not review_text:
+            return jsonify({'ok': False, 'error': 'review text is required'}), 400
+        
+        cur = mysql.connection.cursor()
+        
+        # Check if user exists
+        cur.execute("SELECT id FROM users WHERE id = %s", (user_id,))
+        if not cur.fetchone():
+            cur.close()
+            return jsonify({'ok': False, 'error': 'User not found'}), 404
+        
+        # Check if product exists
+        cur.execute("SELECT id FROM products WHERE id = %s", (product_id,))
+        if not cur.fetchone():
+            cur.close()
+            return jsonify({'ok': False, 'error': 'Product not found'}), 404
+        
+        # Check if user already reviewed this product
+        cur.execute("SELECT id FROM reviews WHERE user_id = %s AND product_id = %s", (user_id, product_id))
+        if cur.fetchone():
+            cur.close()
+            return jsonify({'ok': False, 'error': 'You have already reviewed this product'}), 400
+        
+        # Insert the review
+        cur.execute(
+            "INSERT INTO reviews (user_id, product_id, rating, review, replie) VALUES (%s, %s, %s, %s, '')",
+            (user_id, product_id, rating, review_text)
+        )
+        mysql.connection.commit()
+        review_id = cur.lastrowid
+        
+        # Update product rating
+        cur.execute("""
+            UPDATE products 
+            SET rate = (SELECT AVG(rating) FROM reviews WHERE product_id = %s)
+            WHERE id = %s
+        """, (product_id, product_id))
+        mysql.connection.commit()
+        cur.close()
+        
+        return jsonify({'ok': True, 'review_id': review_id, 'message': 'Review submitted successfully!'})
+    except Exception as e:
+        try:
+            cur.close()
+        except Exception:
+            pass
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
 @app.route('/api/categories/delete', methods=['POST'])
 @csrf.exempt
 def api_delete_category():
