@@ -5863,9 +5863,13 @@ def access_denied():
         available_pages = [p[0] for p in permissions]
         
         # If user has at least one permission, redirect to first available page
+        # But avoid redirect loops by checking the referrer
         if available_pages:
             first_page = available_pages[0]
-            return redirect(f'/{first_page}')
+            referrer = request.headers.get('Referer', '')
+            # Don't redirect back to the same page that sent us here
+            if not referrer.endswith(f'/{first_page}'):
+                return redirect(f'/{first_page}')
         
         # No permissions - show error page
         return render_template('access_denied.html', available_pages=[])
