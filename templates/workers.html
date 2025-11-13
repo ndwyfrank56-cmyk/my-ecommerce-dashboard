@@ -944,19 +944,15 @@
       confirmMessage.textContent = message;
       confirmCallback = callback;
       confirmOverlay.style.display = 'flex';
-      // Reset button state
-      setButtonLoading(confirmYes, false);
     }
 
     window.hideConfirm = function(){
       confirmOverlay.style.display = 'none';
       confirmCallback = null;
-      setButtonLoading(confirmYes, false);
-    }
+          }
 
     confirmYes.addEventListener('click', () => {
       if(confirmCallback) {
-        setButtonLoading(confirmYes, true);
         confirmCallback();
       }
     });
@@ -1100,8 +1096,7 @@
     event.preventDefault();
     
     const submitBtn = event.target.querySelector('button[type="submit"]');
-    setButtonLoading(submitBtn, true);
-    
+        
     const workerId = document.getElementById('emailWorkerId').value;
     const workerEmail = document.getElementById('emailWorkerEmail').value;
     const subject = document.getElementById('emailSubject').value;
@@ -1119,8 +1114,7 @@
     })
       .then(res => res.json())
       .then(data => {
-        setButtonLoading(submitBtn, false);
-        if (data.ok) {
+                if (data.ok) {
           showAlert('Email sent successfully!', 'success');
           closeEmailModal();
         } else {
@@ -1128,8 +1122,7 @@
         }
       })
       .catch(err => {
-        setButtonLoading(submitBtn, false);
-        console.error('Error sending email:', err);
+                console.error('Error sending email:', err);
         showAlert('Error sending email', 'error');
       });
   }
@@ -1138,8 +1131,7 @@
     event.preventDefault();
     
     const submitBtn = event.target.querySelector('button[type="submit"]');
-    setButtonLoading(submitBtn, true);
-    
+        
     const workerId = document.getElementById('permWorker').value;
     const checkboxes = document.querySelectorAll('.perm-check:checked');
     const pages = Array.from(checkboxes).map(cb => cb.value);
@@ -1154,8 +1146,7 @@
     })
       .then(res => res.json())
       .then(data => {
-        setButtonLoading(submitBtn, false);
-        if (data.ok) {
+                if (data.ok) {
           showAlert('Permissions updated successfully!', 'success');
           closePermissionsModal();
           setTimeout(() => location.reload(), 1000);
@@ -1164,8 +1155,7 @@
         }
       })
       .catch(err => {
-        setButtonLoading(submitBtn, false);
-        console.error('Error updating permissions:', err);
+                console.error('Error updating permissions:', err);
         showAlert('Error updating permissions', 'error');
       });
   }

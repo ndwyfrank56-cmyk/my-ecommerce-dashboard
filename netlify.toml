@@ -1,0 +1,5 @@
+# This is a Flask application, not suitable for Netlify
+# Use Render, Railway, or Heroku for Flask deployment
+# For Render deployment, use the following:
+# Build Command: pip install -r requirements.txt
+# Start Command: gunicorn app:app

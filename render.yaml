@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: ecommerce-dashboard
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.18
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DB_HOST
+        fromService:
+          type: pserv
+          name: ecommerce-db
+          property: host
+      - key: DB_USER
+        value: ecommerce_user
+      - key: DB_PASSWORD
+        generateValue: true
+      - key: DB_NAME
+        value: ecommerce
+      - key: DB_PORT
+        value: 5432
+      - key: DB_SSL
+        value: true
+
+databases:
+  - name: ecommerce-db
+    databaseName: ecommerce
+    user: ecommerce_user

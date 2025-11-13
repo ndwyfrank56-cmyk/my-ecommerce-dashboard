@@ -644,9 +644,6 @@
     function rwf(v){ try{return 'RWF ' + Number(v||0).toLocaleString();}catch(e){ return 'RWF ' + v; } }
     function openModal(){ overlay.style.display='flex'; }
     function closeModal(){ overlay.style.display='none'; if(ordersRow) ordersRow.innerHTML=''; }
-    function setLoading(msg){
-      if(ordersRow) ordersRow.innerHTML = `<div class="cust-empty">${msg||'Loading…'}</div>`;
-    }
 
     if(closeBtn) closeBtn.addEventListener('click', closeModal);
 
@@ -708,7 +705,6 @@
           if(phone) params.phone = phone;
           if(name) params.name = name;
           openModal();
-          setLoading('Loading orders…');
           await loadOrders(params);
         }catch(e){
           if(ordersRow) ordersRow.innerHTML = `<div class="cust-empty" style="color:#ef4444;">${(e&&e.message)||'Failed to load orders'}</div>`;

@@ -374,37 +374,6 @@
             color: var(--text-primary);
         }
 
-        .loading-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            z-index: 9999;
-        }
-
-        .spinner {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 60px;
-            height: 60px;
-            border: 6px solid rgba(255, 255, 255, 0.1);
-            border-top: 6px solid rgba(255, 255, 255, 0.9);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            transform: translate(-50%, -50%);
-            box-shadow: none;
-        }
-
-        @keyframes spin {
-            0% { transform: translate(-50%, -50%) rotate(0deg); }
-            100% { transform: translate(-50%, -50%) rotate(360deg); }
-        }
 
         /* Mobile bottom nav (visible on <= 992px) */
         .bottom-nav { display: none; }
@@ -685,9 +654,6 @@
         })();
     </script>
 
-    <div id="loadingOverlay" class="loading-overlay">
-        <div class="spinner"></div>
-    </div>
 
     {% include "flash_messages.html" %}
     
@@ -807,46 +773,7 @@
                 });
             });
 
-            // Show loading overlay on button click
-            loadingButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    document.getElementById('loadingOverlay').style.display = 'block';
-                });
-            });
 
-            // Global page loading handlers with browser navigation fix
-            function startPageLoading(){ document.body.classList.add('loading'); document.body.classList.remove('page-in'); }
-            function stopPageLoading(){ document.body.classList.remove('loading'); }
-            
-            // Handle browser back/forward navigation properly
-            window.addEventListener('pageshow', function(event) {
-                // Force stop loading on browser back/forward
-                setTimeout(() => { 
-                    stopPageLoading(); 
-                    document.body.classList.add('page-in'); 
-                }, 50);
-            });
-            
-            // Start on navigation away (but not on browser back/forward)
-            window.addEventListener('beforeunload', function(event) {
-                // Only show loading for actual navigation, not browser back/forward
-                if (!event.persisted) {
-                    startPageLoading();
-                }
-            });
-            
-            // Stop when DOM is ready and trigger content entrance
-            setTimeout(() => { stopPageLoading(); document.body.classList.add('page-in'); }, 100);
-            
-            // Intercept internal link clicks to show loading immediately
-            document.querySelectorAll('a[href]')
-              .forEach(a => {
-                const href = a.getAttribute('href')||'';
-                if (href.startsWith('#') || a.target === '_blank') return;
-                a.addEventListener('click', () => {
-                  startPageLoading();
-                });
-              });
 
             // Desktop sidebar: toggle on button click
             if (sidebar && window.innerWidth > 1200) {
@@ -939,44 +866,6 @@
         // Alias for consistency
         window.showAlert = window.showFlash;
         
-        // Button Loading State Management
-        window.setButtonLoading = function(button, isLoading) {
-            if (isLoading) {
-                // Store original content
-                button.dataset.originalText = button.innerHTML;
-                button.disabled = true;
-                button.style.opacity = '0.6';
-                button.style.cursor = 'not-allowed';
-                
-                // Add spinner icon
-                button.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Loading...';
-            } else {
-                // Restore original content
-                button.disabled = false;
-                button.style.opacity = '1';
-                button.style.cursor = 'pointer';
-                button.innerHTML = button.dataset.originalText || button.innerHTML;
-            }
-        };
-        
-        // Auto-add loading states to all form submissions
-        document.addEventListener('DOMContentLoaded', function() {
-            // Handle all forms with submit buttons
-            const forms = document.querySelectorAll('form');
-            forms.forEach(form => {
-                form.addEventListener('submit', function(e) {
-                    const submitBtn = form.querySelector('button[type="submit"]');
-                    if (submitBtn && !submitBtn.disabled) {
-                        setButtonLoading(submitBtn, true);
-                        
-                        // Reset after 10 seconds as fallback
-                        setTimeout(() => {
-                            setButtonLoading(submitBtn, false);
-                        }, 10000);
-                    }
-                });
-            });
-        });
     </script>
 </body>
 </html>

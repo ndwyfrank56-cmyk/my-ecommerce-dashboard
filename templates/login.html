@@ -579,22 +579,6 @@
         transition-duration: 0.01ms !important;
       }
     }
-
-    /* Loading Spinner */
-    .loading-spinner {
-      width: 20px;
-      height: 20px;
-      border: 2px solid var(--text-light);
-      border-top: 2px solid var(--accent);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-left: 0.5rem;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
   </style>
 </head>
 <body>
@@ -805,14 +789,6 @@
         });
       }
 
-      // Form submission loading state
-      document.querySelectorAll('form').forEach(form => {
-        form.addEventListener('submit', function() {
-          const btn = this.querySelector('button[type="submit"]');
-          btn.innerHTML = btn.innerHTML.replace('</i>', '<span class="loading-spinner"></span></i>');
-          btn.disabled = true;
-        });
-      });
     });
   </script>
 </body>

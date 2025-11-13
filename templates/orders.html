@@ -59,7 +59,7 @@
       document.querySelectorAll('.btn-list').forEach(btn => {
         btn.addEventListener('click', async () => {
           const oid = btn.dataset.oid;
-          openModal(`Order ${oid} • Items`, '<p class="loading">Loading items…</p>');
+          openModal(`Order ${oid} • Items`, '');
           try {
             const res = await fetch(`/api/orders/${oid}/items`);
             const data = await res.json();
