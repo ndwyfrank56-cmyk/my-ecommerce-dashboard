@@ -147,6 +147,33 @@
   </script>
 
   <style>
+    /* Order Card Watermark */
+    .order-item {
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .order-item::before {
+      content: attr(data-watermark);
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-45deg);
+      font-size: 72px;
+      font-weight: 900;
+      opacity: 0.08;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 0;
+      letter-spacing: 8px;
+      text-transform: uppercase;
+    }
+    
+    .order-item > * {
+      position: relative;
+      z-index: 1;
+    }
+    
     /* Modern Date Picker Styling */
     .date-picker-container {
       display: flex;
@@ -412,7 +439,9 @@
     <div class="orders-row">
       {% for o in orders %}
       {% set st = o.status|lower %}
-      <div class="order-item">
+      {% set d = (o.delivered or '')|lower %}
+      {% set watermark_text = 'DELIVERED' if d == 'yes' else 'CANCELLED' if d == 'false' else 'PENDING' %}
+      <div class="order-item" data-watermark="{{ watermark_text }}">
         <div class="order-top">
           <h4>{{ o.code or 'ORD-49' }}</h4>
           {% set d = (o.delivered or '')|lower %}

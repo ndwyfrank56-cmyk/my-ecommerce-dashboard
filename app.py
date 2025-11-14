@@ -2782,19 +2782,8 @@ def products():
                 'has_variation_errors': len(variation_errors) > 0,
             })
         
-        # Sort products by priority: errors (0) > out of stock (1) > low stock (2) > normal (3)
-        def get_sort_priority(product):
-            if product['has_variation_errors']:
-                return 0  # Highest priority - variation errors
-            elif product['stock'] == 0:
-                return 1  # Out of stock
-            elif product['stock'] <= LOW_STOCK_THRESHOLD:
-                return 2  # Low stock
-            else:
-                return 3  # Normal stock
-        
-        # Sort with priority first, then by ID (newest first)
-        products_list.sort(key=lambda p: (get_sort_priority(p), -p['id']))
+        # Note: Sorting is now handled by the database query (ORDER BY clause)
+        # Client-side sorting was overriding filters, so it's been removed
         
         # Total count for pagination
         count_query = f"""
