@@ -747,6 +747,8 @@
             const content = document.querySelector('.content');
             const pageProgress = document.getElementById('pageProgress');
             const pageLoader = document.getElementById('pageLoader');
+            const origin = window.location.origin;
+            function showLoader(){ if(pageLoader){ pageLoader.classList.add('active'); void pageLoader.offsetHeight; } }
 
             // Open sidebar
             hamburger.addEventListener('click', function() {
@@ -787,10 +789,26 @@
             // Initialize page visibility
             document.body.classList.add('page-in');
             if (pageLoader) {
-                pageLoader.style.display = 'flex';
-                window.addEventListener('load', function() { pageLoader.style.display = 'none'; });
-                setTimeout(function() { pageLoader.style.display = 'none'; }, 4000);
+                pageLoader.classList.add('active');
+                window.addEventListener('load', function() { pageLoader.classList.remove('active'); });
+                setTimeout(function() { pageLoader.classList.remove('active'); }, 4000);
             }
+
+            document.addEventListener('click', function(e){
+                const link = e.target.closest('a[href]');
+                if(!link) return;
+                if(link.target && link.target.toLowerCase() === '_blank') return;
+                const href = link.getAttribute('href');
+                if(!href || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:')) return;
+                const url = new URL(href, window.location.href);
+                if(url.origin !== origin) return;
+                if(e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                showLoader();
+            }, true);
+
+            document.addEventListener('submit', function(){ showLoader(); }, true);
+            window.addEventListener('beforeunload', function(){ showLoader(); });
+            window.addEventListener('popstate', function(){ showLoader(); });
             
             // Desktop sidebar: toggle on button click
             if (sidebar && window.innerWidth > 1200) {
@@ -885,7 +903,8 @@
         
     </script>
     <style>
-        .content .page-loader { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 5; background: transparent; }
+        .content .page-loader { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 10000; background: transparent; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .15s ease; }
+        .content .page-loader.active { opacity: 1; visibility: visible; }
         .content .loader { position: relative; width: 64px; height: 64px; border-radius: 50%; perspective: 800px; }
         .content .loader .inner { position: absolute; box-sizing: border-box; width: 100%; height: 100%; border-radius: 50%; }
         .content .loader .inner.one { left: 0; top: 0; animation: rotate-one 1s linear infinite; border-bottom: 3px solid #EFEFFA; }
