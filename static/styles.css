@@ -11,6 +11,21 @@
 
 /* ===== Phone Optimizations (≤ 480px) ===== */
 @media (max-width: 480px) {
+  /* Compact page header (Orders & Archives) */
+  .orders-page .orders-header {
+    padding: 8px 0 6px 0 !important;
+    margin-bottom: 8px !important;
+  }
+  .orders-page .orders-header h1 {
+    font-size: 16px !important;
+    line-height: 1.2 !important;
+  }
+  .orders-page .orders-header .btn-refresh {
+    height: 32px !important;
+    padding: 0 10px !important;
+    font-size: 12px !important;
+    border-radius: 8px !important;
+  }
   /* Make header/info stats compact and 2 per row */
   .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
