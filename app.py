@@ -1503,6 +1503,9 @@ def orders():
             'total': total_rows,
             'pages': math.ceil(total_rows / per_page) if per_page else 1,
         }
+    )
+    
+    return response
 
 @app.route('/archives')
 @login_required
