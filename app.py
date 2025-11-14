@@ -1503,94 +1503,15 @@ def orders():
             'total': total_rows,
             'pages': math.ceil(total_rows / per_page) if per_page else 1,
         }
-    )
-    
-    return response
 
 @app.route('/archives')
 @login_required
 @check_page_permission('orders')
 def archives():
     """Archives page - shows delivered and cancelled orders"""
-    
-    # Read filters from query params
-    q = request.args.get('q', type=str, default='').strip()
-    date_from = request.args.get('from')
-    date_to = request.args.get('to')
-    sort = request.args.get('sort', 'newest')
+    return ("Not Found", 404)
 
-    # Build query - include delivered OR cancelled orders
-    where = ["(LOWER(TRIM(COALESCE(delivered, ''))) IN ('yes', 'y', 'true', '1') OR LOWER(TRIM(COALESCE(delivered, ''))) = 'false')"]
-    params = []
-    
-    if q:
-        where.append("(CAST(id AS CHAR) LIKE %s OR full_name LIKE %s)")
-        like = f"%{q}%"
-        params.extend([like, like])
-    
-    if date_from:
-        where.append("DATE(created_at) >= %s")
-        params.append(date_from)
-    if date_to:
-        where.append("DATE(created_at) <= %s")
-        params.append(date_to)
-
-    where_sql = " WHERE " + " AND ".join(where)
-    order_sql = " ORDER BY created_at DESC" if sort == 'newest' else " ORDER BY created_at ASC"
-
-    # Pagination
-    per_page = 20
-    try:
-        page = int(request.args.get('page', 1))
-        if page < 1: page = 1
-    except Exception:
-        page = 1
-    
-    offset = (page - 1) * per_page
-
-    # Fetch delivered orders (paged)
-    cur = mysql.connection.cursor()
-    
-    # Detect optional columns
-    cur.execute("SHOW COLUMNS FROM orders LIKE 'notes'")
-    has_notes_col = cur.fetchone() is not None
-    cur.execute("SHOW COLUMNS FROM orders LIKE 'address_line'")
-    has_address_line_col = cur.fetchone() is not None
-    cur.execute("SHOW COLUMNS FROM orders LIKE 'city'")
-    has_city_col = cur.fetchone() is not None
-    cur.execute("SHOW COLUMNS FROM orders LIKE 'payment_status'")
-    has_payment_status_col = cur.fetchone() is not None
-    cur.execute("SHOW COLUMNS FROM orders LIKE 'status'")
-    has_status_col = cur.fetchone() is not None
-    
-    # Build dynamic SELECT
-    select_fields = "id, full_name, created_at, total_amount"
-    if has_status_col:
-        select_fields += ", status"
-    select_fields += ", delivery_phone, provider, delivered"
-    if has_payment_status_col:
-        select_fields += ", payment_status"
-    
-    cur.execute(
-        f"""
-        SELECT {select_fields}
-        FROM orders
-        {where_sql}
-        {order_sql}
-        LIMIT %s OFFSET %s
-        """, params + [per_page, offset],
-    )
-    rows = cur.fetchall()
-
-    # Normalize rows
-    orders_list = []
-    for r in rows:
-        idx = 0
-        oid = r[idx]; idx += 1
-        full_name = r[idx]; idx += 1
-        created_at = r[idx]; idx += 1
-        total_amount = r[idx]; idx += 1
-        
+# ... (rest of the code remains the same)
         if has_status_col:
             st = r[idx]; idx += 1
         else:
