@@ -1771,6 +1771,16 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .btn-assign { background: rgba(255,255,255,0.9); border: 1px solid rgba(255,255,255,0.3); }
 .btn-print  { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.15); }
 
+/* Orders page: make Cancel button (btn-print) smoky white */
+.orders-container .btn-print {
+  background: #e5e7eb;
+  color: #1a1a1a;
+  border: 1px solid rgba(255,255,255,0.3);
+}
+.orders-container .btn-print:hover {
+  background: #f3f4f6;
+}
+
 /* Product card edit and delete buttons - make them visible */
 .product-item .btn-edit.btn-assign { 
   background: #f3f4f6 !important; 

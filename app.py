@@ -2647,24 +2647,54 @@ def api_order_cancel(oid: int):
             pass
         return jsonify({"ok": False, "error": f"Failed to cancel order: {str(e)}"}), 500
 
-# DISABLED: Delete order - use cancellation instead for audit trail
 @app.route('/api/orders/<int:oid>/delete', methods=['DELETE'])
 @csrf.exempt
 @login_required
 def api_order_delete(oid: int):
     """
-    DISABLED: Permanent deletion removed for data integrity and audit compliance
-    Use cancellation instead - maintains audit trail and financial records
+    Permanently delete an order that has already been cancelled.
+    Safety guard: only allow delete if status='cancelled' OR delivered='false'.
+    This endpoint removes child records in order_items before deleting the order.
     """
-    # Flash warning message about deletion being disabled
-    flash(f'Order #{oid} deletion is disabled for audit compliance. Use Cancel Order instead.', 'warning')
-    
-    return jsonify({
-        "ok": False, 
-        "error": "Order deletion disabled for audit compliance. Use 'Cancel Order' instead.",
-        "suggestion": "Cancelled orders are archived and maintain audit trail for accounting purposes.",
-        "alternative": f"To remove Order {oid} from active view: Cancel the order instead of deleting it."
-    }), 400
+    try:
+        cur = mysql.connection.cursor()
+
+        # Verify order exists and is eligible for deletion
+        cur.execute("SELECT status, delivered FROM orders WHERE id = %s", (oid,))
+        row = cur.fetchone()
+        if not row:
+            cur.close()
+            return jsonify({"ok": False, "error": "Order not found"}), 404
+
+        status = (row[0] or '').strip().lower()
+        delivered = str(row[1] or '').strip().lower()
+        if not (status == 'cancelled' or delivered == 'false'):
+            cur.close()
+            return jsonify({
+                "ok": False,
+                "error": "Order must be cancelled before deletion",
+                "suggestion": "Cancel the order first, then delete."
+            }), 400
+
+        try:
+            # Delete child rows first, then the order
+            cur.execute("DELETE FROM order_items WHERE order_id = %s", (oid,))
+            cur.execute("DELETE FROM orders WHERE id = %s", (oid,))
+            mysql.connection.commit()
+        except Exception as inner_e:
+            mysql.connection.rollback()
+            raise inner_e
+        finally:
+            cur.close()
+
+        return jsonify({"ok": True, "deleted": True, "id": oid})
+
+    except Exception as e:
+        try:
+            mysql.connection.rollback()
+        except:
+            pass
+        return jsonify({"ok": False, "error": f"Failed to delete order: {str(e)}"}), 500
 
 
 @app.route('/products')
