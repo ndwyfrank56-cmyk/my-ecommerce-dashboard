@@ -4248,10 +4248,10 @@ def customers():
             f"""
             SELECT
                 MIN(o.id)                                     AS id,
-                u.id                                          AS user_id,
-                TRIM(COALESCE(NULLIF(o.full_name,''), CONCAT(u.first_name,' ',u.last_name))) AS name,
-                NULLIF(u.email,'')                            AS email,
-                COALESCE(NULLIF(TRIM(o.delivery_phone),''), NULLIF(TRIM(u.phone),'')) AS phone,
+                MIN(u.id)                                     AS user_id,
+                MAX(TRIM(COALESCE(NULLIF(o.full_name,''), CONCAT(u.first_name,' ',u.last_name)))) AS name,
+                MAX(NULLIF(u.email,''))                       AS email,
+                MAX(COALESCE(NULLIF(TRIM(o.delivery_phone),''), NULLIF(TRIM(u.phone),''))) AS phone,
                 COUNT(*)                                      AS orders_count,
                 COALESCE(SUM(o.total_amount), 0)             AS total_spent,
                 MAX(o.created_at)                             AS last_order_date,
