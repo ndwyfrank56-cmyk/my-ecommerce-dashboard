@@ -1300,9 +1300,9 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   margin-bottom: 12px;
 }
 .icon-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
   border: none;
   background: #f3f4f6;
   color: #111827;
@@ -1313,7 +1313,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 /* Removed hover effect and transitions */
-.icon-btn i { font-size: 12px; }
+.icon-btn i { font-size: 10px; }
 
 /* 🔥 FIRE MODAL STYLING 🔥 */
 .x-modal-overlay {
