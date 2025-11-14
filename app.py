@@ -1235,8 +1235,7 @@ def orders():
     where = []
     params = []
     
-    # EXCLUDE delivered and cancelled orders by default (they go to archives)
-    where.append("NOT (LOWER(TRIM(COALESCE(delivered, ''))) IN ('yes', 'y', 'true', '1') OR LOWER(TRIM(COALESCE(delivered, ''))) = 'false')")
+    # Show all orders by default. If a specific delivered filter is set, it will apply below.
     
     if q:
         where.append("(CAST(id AS CHAR) LIKE %s OR full_name LIKE %s)")
