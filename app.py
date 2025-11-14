@@ -19,6 +19,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 import secrets
+import cloudinary
+import cloudinary.uploader
+from cloudinary.utils import cloudinary_url
 
 
 
@@ -506,15 +509,27 @@ def get_transaction_status(payment_status, delivered, provider):
         else:
             return 'pending'
 
-# Uploads configuration - SHARED with website
-# Point to the website's images folder so both dashboard and website use the same images
-WEBSITE_IMAGES_PATH = r'C:\Users\Public\Ecommerce website\static\images'
-app.config['UPLOAD_FOLDER'] = WEBSITE_IMAGES_PATH
+# Cloudinary Configuration
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10 MB
 ALLOWED_IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.gif', '.webp'}
 
-# Create the images folder if it doesn't exist
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+# Initialize Cloudinary
+CLOUDINARY_CLOUD_NAME = os.getenv('CLOUDINARY_CLOUD_NAME')
+CLOUDINARY_API_KEY = os.getenv('CLOUDINARY_API_KEY')
+CLOUDINARY_API_SECRET = os.getenv('CLOUDINARY_API_SECRET')
+
+if CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET:
+    try:
+        cloudinary.config(
+            cloud_name=CLOUDINARY_CLOUD_NAME,
+            api_key=CLOUDINARY_API_KEY,
+            api_secret=CLOUDINARY_API_SECRET
+        )
+        print(f"✓ Cloudinary initialized - Cloud: {CLOUDINARY_CLOUD_NAME}")
+    except Exception as e:
+        print(f"✗ Failed to initialize Cloudinary: {e}")
+else:
+    print("⚠ Cloudinary credentials not configured. Image uploads will fail.")
 
 def slugify(value: str) -> str:
     s = (value or '').lower().strip()
@@ -2885,30 +2900,46 @@ def product_variations(pid):
 @csrf.exempt
 def api_upload_product_image():
     try:
+        if not CLOUDINARY_CLOUD_NAME:
+            return jsonify({"ok": False, "error": "Cloudinary not configured"}), 500
+        
         if 'image' not in request.files:
             return jsonify({"ok": False, "error": "No image file provided"}), 400
+        
         file = request.files['image']
         if file.filename == '':
             return jsonify({"ok": False, "error": "Empty filename"}), 400
+        
         base_name = request.form.get('name') or request.form.get('slug') or ''
         slug = slugify(base_name)
         filename = secure_filename(file.filename)
         _, ext = os.path.splitext(filename)
         ext = ext.lower()
+        
         if ext not in ALLOWED_IMAGE_EXTENSIONS:
             return jsonify({"ok": False, "error": "Unsupported file type"}), 400
-        # Ensure upload directory exists
-        upload_dir = app.config['UPLOAD_FOLDER']
-        os.makedirs(upload_dir, exist_ok=True)
-        # Build final filename
+        
+        # Build public ID for Cloudinary
         ts = int(time.time())
-        final_name = f"{slug}-{ts}{ext}" if slug else f"img-{ts}{ext}"
-        save_path = os.path.join(upload_dir, final_name)
-        file.save(save_path)
-        # Public URL/path
-        url_path = f"/images/{final_name}"
+        public_id = f"products/{slug}-{ts}" if slug else f"products/img-{ts}"
+        
+        # Upload to Cloudinary
+        file.seek(0)
+        result = cloudinary.uploader.upload(
+            file,
+            public_id=public_id,
+            folder='products',
+            overwrite=False,
+            resource_type='auto'
+        )
+        
+        # Get the secure URL
+        url_path = result['secure_url']
+        final_name = result['public_id'].split('/')[-1]
+        
         return jsonify({"ok": True, "url": url_path, "filename": final_name})
     except Exception as e:
+        print(f"Cloudinary Error: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -2917,8 +2948,12 @@ def api_upload_product_image():
 @csrf.exempt
 def api_upload_variation_image():
     try:
+        if not CLOUDINARY_CLOUD_NAME:
+            return jsonify({"ok": False, "error": "Cloudinary not configured"}), 500
+        
         if 'image' not in request.files:
             return jsonify({"ok": False, "error": "No image file provided"}), 400
+        
         file = request.files['image']
         if file.filename == '':
             return jsonify({"ok": False, "error": "Empty filename"}), 400
@@ -2932,20 +2967,27 @@ def api_upload_variation_image():
         if ext not in ALLOWED_IMAGE_EXTENSIONS:
             return jsonify({"ok": False, "error": "Unsupported file type"}), 400
         
-        # Upload to colors folder
-        colors_dir = r"C:\Users\Public\Ecommerce website\static\images\colors"
-        os.makedirs(colors_dir, exist_ok=True)
-        
-        # Build final filename
+        # Build public ID for Cloudinary
         ts = int(time.time())
-        final_name = f"{slug}-{ts}{ext}" if slug else f"color-{ts}{ext}"
-        save_path = os.path.join(colors_dir, final_name)
-        file.save(save_path)
+        public_id = f"variations/{slug}-{ts}" if slug else f"variations/color-{ts}"
         
-        # Public URL/path
-        url_path = f"/images/colors/{final_name}"
+        # Upload to Cloudinary
+        file.seek(0)
+        result = cloudinary.uploader.upload(
+            file,
+            public_id=public_id,
+            folder='variations',
+            overwrite=False,
+            resource_type='auto'
+        )
+        
+        # Get the secure URL
+        url_path = result['secure_url']
+        final_name = result['public_id'].split('/')[-1]
+        
         return jsonify({"ok": True, "url": url_path, "filename": final_name})
     except Exception as e:
+        print(f"Cloudinary Error: {e}")
         return jsonify({"ok": False, "error": str(e)}), 500
 
 # ---------------------- Variations API ----------------------

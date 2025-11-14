@@ -231,11 +231,11 @@
     margin-bottom: 8px !important;
   }
   .icon-btn {
-    width: 28px !important;
-    height: 28px !important;
+    width: 40px !important;
+    height: 40px !important;
   }
   .icon-btn i {
-    font-size: 12px !important;
+    font-size: 16px !important;
   }
   .customer-name {
     font-size: 13px !important;
@@ -1300,8 +1300,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   margin-bottom: 12px;
 }
 .icon-btn {
-  width: 24px;
-  height: 24px;
+  width: 40px;
+  height: 40px;
   border-radius: 6px;
   border: none;
   background: #f3f4f6;
@@ -1313,7 +1313,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 /* Removed hover effect and transitions */
-.icon-btn i { font-size: 10px; }
+.icon-btn i { font-size: 16px; }
 
 /* 🔥 FIRE MODAL STYLING 🔥 */
 .x-modal-overlay {
@@ -1841,11 +1841,11 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     margin-bottom: 8px !important;
   }
   .order-actions .icon-btn { 
-    width: 100% !important; 
-    height: 36px !important; 
+    width: 44px !important; 
+    height: 44px !important; 
     border-radius: 10px !important; 
   }
-  .order-actions .icon-btn i { font-size: 14px !important; }
+  .order-actions .icon-btn i { font-size: 18px !important; }
 }
 
 /* Removed hover effects and transitions */
