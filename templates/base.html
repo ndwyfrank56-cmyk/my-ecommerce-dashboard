@@ -767,7 +767,7 @@
             const pageProgress = document.getElementById('pageProgress');
             const pageLoader = document.getElementById('pageLoader');
             const origin = window.location.origin;
-            function showLoader(){ if(pageLoader){ pageLoader.classList.add('active'); void pageLoader.offsetHeight; } }
+            function showLoader(){ /* Loading overlay disabled */ }
 
             // Open sidebar
             hamburger.addEventListener('click', function() {
@@ -811,11 +811,7 @@
 
             // Initialize page visibility
             document.body.classList.add('page-in');
-            if (pageLoader) {
-                pageLoader.classList.add('active');
-                window.addEventListener('load', function() { pageLoader.classList.remove('active'); });
-                setTimeout(function() { pageLoader.classList.remove('active'); }, 4000);
-            }
+            // Loading overlay disabled - no loader initialization
 
             document.addEventListener('click', function(e){
                 const link = e.target.closest('a[href]');
