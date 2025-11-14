@@ -6,35 +6,52 @@
 <section class="orders-page">
   <!-- MOBILE STYLES FOR CUSTOMERS PAGE -->
   <style>
+    /* ROOT FIXES - force single column on mobile, no exceptions */
+    .orders-page .orders-container {
+      padding: 0 6px;
+    }
+    .orders-page .orders-row {
+      display: grid !important;
+      gap: 16px !important;
+      grid-template-columns: 1fr !important; /* MOBILE FIRST */
+      margin: 0 auto;
+    }
+
+    /* Force single column on mobile - no horizontal expansion */
     @media (max-width: 768px) {
-      .orders-page {
-        padding: 0 !important;
-        margin: 0 !important;
+      .orders-page .orders-container {
+        padding: 0 4px;
       }
-      .orders-container {
-        padding: 0 !important;
-        margin: 0 !important;
-      }
-      .orders-row {
-        grid-template-columns: repeat(2, 1fr) !important;
+      .orders-page .orders-row {
+        grid-template-columns: 1fr !important;
         gap: 8px !important;
-        padding: 0 !important;
-        margin: 0 !important;
       }
-      /* Keep 2 columns on mobile */
-      .order-item {
+      .orders-page .orders-row * {
+        min-width: 0 !important;
+      }
+      
+      /* Compact cards on mobile */
+      .orders-page .order-item {
         padding: 12px !important;
-        margin: 0 !important;
+        border-radius: 10px !important;
       }
+      
+      .order-top {
+        margin-bottom: 8px !important;
+      }
+      
       .order-top h4 {
-        font-size: 13px !important;
+        font-size: 14px !important;
       }
+      
       .customer-name {
         font-size: 13px !important;
       }
+      
       .order-info {
-        font-size: 11px !important;
+        font-size: 12px !important;
       }
+      
       .info-row {
         margin-bottom: 4px !important;
       }
@@ -80,6 +97,29 @@
       .order-item {
         padding: 10px !important;
       }
+    }
+
+    /* Desktop grid - only apply above 768px */
+    @media (min-width: 769px) {
+      .orders-page .orders-row {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+        gap: 14px !important;
+      }
+    }
+
+    /* CARD STYLE - clean mobile */
+    .orders-page .order-item {
+      background: var(--surface) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 12px !important;
+      padding: 12px !important;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+      display: flex !important;
+      flex-direction: column !important;
+      width: 100%;
+      max-width: 100%;
+      overflow: hidden;
+      box-sizing: border-box;
     }
   </style>
   <div class="orders-header d-flex align-items-center justify-content-between mb-3">
