@@ -607,17 +607,6 @@
     
   </select>
 
-  <select name="sales_days" class="filter-select">
-    {% set sd = (filters.sales_days or '') %}
-    <option value="" {% if not sd %}selected{% endif %}>All Time</option>
-    <option value="7" {% if sd=='7' %}selected{% endif %}>Last 7 days</option>
-    <option value="30" {% if sd=='30' %}selected{% endif %}>Last 30 days</option>
-    <option value="90" {% if sd=='90' %}selected{% endif %}>Last 90 days</option>
-    <option value="365" {% if sd=='365' %}selected{% endif %}>Last 365 days</option>
-  </select>
-
-  <input type="number" name="sales_year" class="filter-input" min="2000" max="2100" step="1" value="{{ filters.sales_year or '' }}" placeholder="Year (e.g., 2025)" />
-
   <input type="number" name="min_sales" class="filter-input" step="1" min="0" value="{{ filters.min_sales or '' }}" placeholder="Min Sales Cnt" />
   <input type="number" name="max_sales" class="filter-input" step="1" min="0" value="{{ filters.max_sales or '' }}" placeholder="Max Sales Cnt" />
   
@@ -753,7 +742,7 @@
       
       <div class="product-info">
         <div class="info-row">
-          <span>Sales:</span> {{ p.sales_count or 0 }}{% if filters.sales_year %} ({{ filters.sales_year }}){% elif filters.sales_days %} ({{ filters.sales_days }}d){% endif %}
+          <span>Sales:</span> {{ p.sales_count or 0 }}
         </div>
       </div>
       
@@ -796,8 +785,6 @@
       ~ '&stock=' ~ (filters.stock or '')
       ~ '&min_sales=' ~ (filters.min_sales or '')
       ~ '&max_sales=' ~ (filters.max_sales or '')
-      ~ '&sales_days=' ~ (filters.sales_days or '')
-      ~ '&sales_year=' ~ (filters.sales_year or '')
       ~ '&per_page=' ~ (filters.per_page or '') %}
   
   <a href="{{ base }}&page=1" class="pagination-btn" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #9ca3af; text-decoration: none; font-size: 13px;">
