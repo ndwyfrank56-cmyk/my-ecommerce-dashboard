@@ -147,26 +147,10 @@
   </script>
 
   <style>
-    /* Order Card Watermark */
+    /* Order Card Watermark - REMOVED */
     .order-item {
       position: relative;
       overflow: hidden;
-    }
-    
-    .order-item::before {
-      content: attr(data-watermark);
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%) rotate(-45deg);
-      font-size: 72px;
-      font-weight: 900;
-      opacity: 0.08;
-      pointer-events: none;
-      white-space: nowrap;
-      z-index: 0;
-      letter-spacing: 8px;
-      text-transform: uppercase;
     }
     
     .order-item > * {
@@ -698,8 +682,10 @@
                   const res = await fetch(`/api/orders/${oid}/delete`, { method: 'DELETE' });
                   const data = await res.json();
                   if (!data.ok) { showFlash(data.error || 'Failed to delete', 'error'); return; }
+                  // Show success flash message before reloading
+                  showFlash(`Order #${oid} has been deleted successfully.`, 'success');
                   // Reload page to refresh all data
-                  location.reload();
+                  setTimeout(() => location.reload(), 1500);
                 } catch (e) {
                   showFlash(e.message || 'An error occurred', 'error');
                 }
