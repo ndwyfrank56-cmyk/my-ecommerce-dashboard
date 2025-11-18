@@ -133,7 +133,7 @@
               return;
             }
             const mapId = 'map_'+Date.now();
-            const html = `<div style="height: 30vh; border-radius: 8px; overflow: hidden;"><div id="${mapId}" style="height:100%;"></div></div>`;
+            const html = `<div style="height: 15vh; border-radius: 8px; overflow: hidden;"><div id="${mapId}" style="height:100%;"></div></div>`;
             openModal(`Order ${oid}, Location`, html);
             setTimeout(() => {
               const map = L.map(mapId).setView([lat, lon], 15);
