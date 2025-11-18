@@ -703,7 +703,7 @@
       <div class="product-top">
         <h4>PRD-{{ "%03d"|format(p.id) }}</h4>
         {% if p.has_variation_errors %}
-        <span class="stock-badge stock-error"><i class="fa fa-exclamation-triangle"></i> ERROR</span>
+        <span class="stock-badge stock-error">ERROR</span>
         {% else %}
         <span class="stock-badge stock-{{ p.stock_status }}">{{ p.stock_badge }}</span>
         {% endif %}
@@ -723,12 +723,10 @@
       {% if p.has_variation_errors %}
       <div class="variation-error-box">
         <div class="error-header">
-          <i class="fa fa-exclamation-circle"></i>
           <strong>VARIATION ERRORS</strong>
         </div>
         {% for error in p.variation_errors %}
         <div class="error-item">
-          <i class="fa fa-circle" style="font-size: 4px; margin-right: 4px;"></i>
           {{ error }}
         </div>
         {% endfor %}
@@ -757,7 +755,6 @@
       </div>
       
       <button class="btn-manage-variations" onclick="window.location.href='/products/{{ p.id }}/variations'">
-        <i class="fa fa-sliders"></i>
         <span class="btn-text-short">Variations</span>
         <span class="btn-text-full">Manage Variations</span>
       </button>
