@@ -715,7 +715,12 @@
         <div class="order-item">
           <div class="order-top">
             <h4>{{ worker[1] }}</h4>
-            <span class="status-badge {{ 'status-delivered' if worker[8] == 1 else 'status-pending' }}">{{ 'Registered' if worker[8] == 1 else 'Not Registered' }}</span>
+            <div style="display: flex; gap: 8px;">
+              <span class="status-badge {{ 'status-delivered' if worker[8] == 1 else 'status-pending' }}">{{ 'Registered' if worker[8] == 1 else 'Not Registered' }}</span>
+              {% if worker[9] == 1 %}
+              <span class="status-badge" style="background: #dc2626; border-color: #dc2626;">Protected Admin</span>
+              {% endif %}
+            </div>
           </div>
 
           <div class="order-actions">
@@ -731,7 +736,9 @@
 
           <div class="order-buttons">
             <button class="btn-assign" onclick="editWorker({{ worker[0] }})">Edit User</button>
-            {% if worker[8] == 1 %}
+            {% if worker[9] == 1 %}
+            <button class="btn-print" disabled style="opacity: 0.5; cursor: not-allowed;" title="Protected admin cannot be deleted">Delete (Protected)</button>
+            {% elif worker[8] == 1 %}
             <button class="btn-print" onclick="resetLogin({{ worker[0] }})" style="background: #047857; border-color: #047857;" title="Delete login credentials so they can register again">Reset Login</button>
             {% else %}
             <button class="btn-print" onclick="deleteWorker({{ worker[0] }})">Delete</button>

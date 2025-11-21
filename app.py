@@ -4940,7 +4940,8 @@ def workers():
         cur = mysql.connection.cursor()
         cur.execute("""
             SELECT w.worker_id, w.name, w.phone, w.email, w.salary, w.profession, w.deptName, w.created_at,
-                   CASE WHEN wl.worker_id IS NOT NULL THEN 1 ELSE 0 END as is_registered
+                   CASE WHEN wl.worker_id IS NOT NULL THEN 1 ELSE 0 END as is_registered,
+                   COALESCE(w.is_protected, 0) as is_protected
             FROM workers w
             LEFT JOIN worker_login wl ON w.worker_id = wl.worker_id
             ORDER BY w.created_at DESC
@@ -5233,13 +5234,19 @@ def delete_worker(worker_id):
         cur = mysql.connection.cursor()
         
         # Get worker details before deleting
-        cur.execute("SELECT name, email FROM workers WHERE worker_id = %s", (worker_id,))
+        cur.execute("SELECT name, email, is_protected FROM workers WHERE worker_id = %s", (worker_id,))
         worker = cur.fetchone()
         if not worker:
             return jsonify({'ok': False, 'error': 'Worker not found'}), 404
             
         worker_name = worker[0]
         worker_email = worker[1]
+        is_protected = worker[2] if len(worker) > 2 else 0
+        
+        # Prevent deletion of protected admins
+        if is_protected:
+            cur.close()
+            return jsonify({'ok': False, 'error': f'{worker_name} is a protected admin and cannot be deleted'}), 403
         
         # Delete worker
         cur.execute("DELETE FROM workers WHERE worker_id = %s", (worker_id,))
