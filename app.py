@@ -5240,13 +5240,19 @@ def delete_worker(worker_id):
         cur = mysql.connection.cursor()
         
         # Get worker details before deleting
-        cur.execute("SELECT name, email FROM workers WHERE worker_id = %s", (worker_id,))
+        cur.execute("SELECT name, email, profession FROM workers WHERE worker_id = %s", (worker_id,))
         worker = cur.fetchone()
         if not worker:
             return jsonify({'ok': False, 'error': 'Worker not found'}), 404
             
         worker_name = worker[0]
         worker_email = worker[1]
+        profession = worker[2]
+        
+        # Prevent deletion of admin users
+        if profession and profession.lower() == 'admin':
+            cur.close()
+            return jsonify({'ok': False, 'error': 'Admin users cannot be deleted'}), 403
         
         # Delete worker
         cur.execute("DELETE FROM workers WHERE worker_id = %s", (worker_id,))
@@ -5497,222 +5503,6 @@ def send_email_to_worker():
         return jsonify({'ok': True, 'message': 'Email sent successfully'})
     except Exception as e:
         print(f"Send email error: {e}")
-        return jsonify({'ok': False, 'error': str(e)}), 500
-
-@app.route('/workers/get-reset-code/<int:worker_id>', methods=['POST'])
-@csrf.exempt
-@login_required
-@check_page_permission('workers')
-def get_reset_code(worker_id):
-    """Generate password reset code for a worker"""
-    try:
-        cur = mysql.connection.cursor()
-        
-        # Get worker info
-        cur.execute("""
-            SELECT wl.username, w.name, w.email
-            FROM worker_login wl
-            JOIN workers w ON wl.worker_id = w.worker_id
-            WHERE w.worker_id = %s
-        """, (worker_id,))
-        
-        worker = cur.fetchone()
-        cur.close()
-        
-        if not worker:
-            return jsonify({'ok': False, 'error': 'Worker or login not found'}), 404
-        
-        username, name, email = worker
-        
-        # Generate reset code (first 4 chars of username + worker_id)
-        reset_code = f"{username[:4].upper()}{worker_id:04d}"
-        
-        return jsonify({
-            'ok': True, 
-            'reset_code': reset_code,
-            'username': username,
-            'name': name,
-            'email': email
-        })
-    except Exception as e:
-        print(f"Get reset code error: {e}")
-        return jsonify({'ok': False, 'error': str(e)}), 500
-
-@app.route('/workers/reset-login/<int:worker_id>', methods=['POST'])
-@csrf.exempt
-@login_required
-@check_page_permission('workers')
-def reset_worker_login(worker_id):
-    """Delete worker login credentials so they can register again"""
-    try:
-        cur = mysql.connection.cursor()
-        
-        # Check if worker exists and get their details
-        cur.execute("SELECT worker_id, name, email FROM workers WHERE worker_id = %s", (worker_id,))
-        worker = cur.fetchone()
-        
-        if not worker:
-            cur.close()
-            return jsonify({'ok': False, 'error': 'Worker not found'}), 404
-        
-        worker_name = worker[1]
-        worker_email = worker[2]
-        
-        # Check if worker has login credentials
-        cur.execute("SELECT login_id FROM worker_login WHERE worker_id = %s", (worker_id,))
-        login_exists = cur.fetchone()
-        
-        if not login_exists:
-            cur.close()
-            return jsonify({'ok': False, 'error': 'Worker has no login credentials to reset'}), 400
-        
-        # Delete login credentials
-        cur.execute("DELETE FROM worker_login WHERE worker_id = %s", (worker_id,))
-        mysql.connection.commit()
-        cur.close()
-        
-        # Send reset notification email
-        try:
-            if worker_email:
-                msg = Message(
-                    subject='Login Credentials Reset - Dashboard',
-                    recipients=[worker_email],
-                    sender=('Dashboard Team', app.config['MAIL_USERNAME'])
-                )
-                
-                register_url = request.url_root + 'register'
-                
-                msg.html = f"""
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="UTF-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <style>
-                        body {{ 
-                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
-                            line-height: 1.6; 
-                            color: #333333;
-                            background-color: #f5f5f5;
-                            margin: 0;
-                            padding: 0;
-                        }}
-                        .email-wrapper {{ 
-                            max-width: 600px; 
-                            margin: 40px auto; 
-                            background-color: #ffffff;
-                            border: 1px solid #e0e0e0;
-                            border-radius: 8px;
-                            overflow: hidden;
-                        }}
-                        .header {{ 
-                            background-color: #ff9800;
-                            color: #ffffff; 
-                            padding: 30px 40px; 
-                            text-align: center;
-                        }}
-                        .header h1 {{ 
-                            margin: 0;
-                            font-size: 24px;
-                            font-weight: 600;
-                        }}
-                        .header p {{
-                            margin: 8px 0 0 0;
-                            font-size: 14px;
-                            opacity: 0.9;
-                        }}
-                        .content {{ 
-                            padding: 40px; 
-                            background-color: #ffffff;
-                        }}
-                        .content p {{
-                            margin: 0 0 16px 0;
-                            color: #555555;
-                            font-size: 15px;
-                        }}
-                        .info-box {{ 
-                            background-color: #fff8e1; 
-                            border-left: 4px solid #ff9800; 
-                            padding: 16px 20px; 
-                            margin: 24px 0;
-                            border-radius: 4px;
-                        }}
-                        .info-box p {{
-                            margin: 0;
-                            color: #e65100;
-                            font-size: 14px;
-                        }}
-                        .cta-button {{
-                            display: inline-block;
-                            background-color: #ff9800;
-                            color: #ffffff;
-                            padding: 14px 32px;
-                            text-decoration: none;
-                            border-radius: 6px;
-                            font-weight: 600;
-                            margin: 20px 0;
-                            text-align: center;
-                        }}
-                        .footer {{ 
-                            background-color: #f8f9fa;
-                            padding: 24px 40px;
-                            text-align: center;
-                            border-top: 1px solid #e0e0e0;
-                        }}
-                        .footer p {{ 
-                            color: #888888; 
-                            font-size: 13px;
-                            margin: 0 0 8px 0;
-                        }}
-                    </style>
-                </head>
-                <body>
-                    <div class="email-wrapper">
-                        <div class="header">
-                            <h1>Login Credentials Reset</h1>
-                            <p>Action Required</p>
-                        </div>
-                        <div class="content">
-                            <p>Hello <strong>{worker_name}</strong>,</p>
-                            <p>Your login credentials for Dashboard have been reset by an administrator.</p>
-                            
-                            <div class="info-box">
-                                <p><strong>What This Means:</strong> Your username and password have been removed from the system. You need to register again to regain access.</p>
-                            </div>
-                            
-                            <p><strong>To regain access:</strong></p>
-                            <ol style="color: #555555; font-size: 15px; line-height: 1.8;">
-                                <li>Click the registration button below</li>
-                                <li>Use your email: <strong>{worker_email}</strong></li>
-                                <li>Create a new username and password</li>
-                                <li>Login with your new credentials</li>
-                            </ol>
-                            
-                            <center>
-                                <a href="{register_url}" class="cta-button">Register Now</a>
-                            </center>
-                            
-                            <p style="margin-top: 32px; font-size: 14px; color: #666666;">
-                                If you have any questions or did not request this reset, please contact your administrator.
-                            </p>
-                        </div>
-                        <div class="footer">
-                            <p>This is an automated notification from Dashboard.</p>
-                            <p>&copy; 2025 Dashboard. All rights reserved.</p>
-                        </div>
-                    </div>
-                </body>
-                </html>
-                """
-                
-                mail.send(msg)
-                print(f"Reset notification sent to {worker_email}")
-        except Exception as email_error:
-            print(f"Failed to send reset email: {email_error}")
-        
-        return jsonify({'ok': True, 'message': f'Login credentials reset for {worker_name}. They can now register again.'})
-    except Exception as e:
-        print(f"Reset login error: {e}")
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 # ============= ACCESS DENIED PAGE =============

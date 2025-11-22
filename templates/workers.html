@@ -736,10 +736,8 @@
 
           <div class="order-buttons">
             <button class="btn-assign" onclick="editWorker({{ worker[0] }})">Edit User</button>
-            {% if worker[9] == 1 %}
-            <button class="btn-print" disabled style="opacity: 0.5; cursor: not-allowed;" title="Protected admin cannot be deleted">Delete (Protected)</button>
-            {% elif worker[8] == 1 %}
-            <button class="btn-print" onclick="resetLogin({{ worker[0] }})" style="background: #047857; border-color: #047857;" title="Delete login credentials so they can register again">Reset Login</button>
+            {% if worker[5] == 'admin' %}
+            <button class="btn-print" disabled style="opacity: 0.5; cursor: not-allowed;" title="Admin users cannot be deleted">Delete (Protected)</button>
             {% else %}
             <button class="btn-print" onclick="deleteWorker({{ worker[0] }})">Delete</button>
             {% endif %}
@@ -1012,31 +1010,6 @@
             hideConfirm();
             console.error('Error deleting user:', err);
             showAlert('Error deleting user', 'error');
-          });
-      }
-    );
-  }
-  
-  function resetLogin(id) {
-    showConfirm(
-      'Reset Login Credentials?',
-      'This will delete their username and password from the system. They will need to register again using their email.',
-      () => {
-        fetch(`/workers/reset-login/${id}`, { method: 'POST' })
-          .then(res => res.json())
-          .then(data => {
-            hideConfirm();
-            if (data.ok) {
-              showAlert(data.message, 'success');
-              setTimeout(() => location.reload(), 1000);
-            } else {
-              showAlert('Error: ' + data.error, 'error');
-            }
-          })
-          .catch(err => {
-            hideConfirm();
-            console.error('Error resetting login:', err);
-            showAlert('Error resetting login credentials', 'error');
           });
       }
     );
