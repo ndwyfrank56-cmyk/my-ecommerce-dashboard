@@ -555,12 +555,16 @@ def api_payment_status():
         
         # Build date filter based on period
         date_filter = ""
+        payment_date_filter = ""
         if period == 'today':
             date_filter = "AND DATE(o.created_at) = CURDATE()"
+            payment_date_filter = "AND DATE(p.created_at) = CURDATE()"
         elif period == '7days':
             date_filter = "AND o.created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)"
+            payment_date_filter = "AND p.created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)"
         elif period == 'month':
             date_filter = "AND MONTH(o.created_at) = MONTH(CURDATE()) AND YEAR(o.created_at) = YEAR(CURDATE())"
+            payment_date_filter = "AND MONTH(p.created_at) = MONTH(CURDATE()) AND YEAR(p.created_at) = YEAR(CURDATE())"
         
         print(f"DEBUG: Date filter: {date_filter}")
         
@@ -610,10 +614,12 @@ def api_payment_status():
             JOIN orders o ON p.order_id = o.id
             WHERE p.status = 'SUCCESSFUL'
             AND LOWER(TRIM(o.payment_status)) = 'paid'
-            {date_filter}
+            {payment_date_filter}
         """
+        print(f"DEBUG: Query 5: {query5}")
         cur.execute(query5)
         paid_revenue = cur.fetchone()[0] or 0.0
+        print(f"DEBUG: Paid revenue: {paid_revenue}")
         
         # Get total pending value
         query6 = f"""
