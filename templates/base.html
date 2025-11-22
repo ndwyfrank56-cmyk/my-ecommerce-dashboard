@@ -799,11 +799,17 @@
             // Check if we're on the     variations page
             const isVariationsPage = window.location.pathname.includes('/variations');
 
+            // Track if we're navigating back to prevent loader
+            let isNavigatingBack = false;
+
             // Hide loader when page fully loads
             window.addEventListener('load', function(){ pageLoader.classList.remove('active'); });
             
-            // Hide loader on popstate (back/forward button)
-            window.addEventListener('popstate', function(){ pageLoader.classList.remove('active'); });
+            // Detect back/forward button - don't show loader
+            window.addEventListener('popstate', function(){ 
+              isNavigatingBack = true;
+              pageLoader.classList.remove('active'); 
+            });
 
             document.addEventListener('click', function(e){
                 const link = e.target.closest('a[href]');
@@ -818,7 +824,9 @@
             }, true);
 
             document.addEventListener('submit', function(){ if(!isVariationsPage) showLoader(); }, true);
-            window.addEventListener('beforeunload', function(){ if(!isVariationsPage) showLoader(); });
+            window.addEventListener('beforeunload', function(){ 
+              if(!isVariationsPage && !isNavigatingBack) showLoader(); 
+            });
             
             // Desktop sidebar: toggle on button click
             if (sidebar && window.innerWidth > 1200) {
