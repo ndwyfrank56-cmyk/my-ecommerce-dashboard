@@ -400,14 +400,21 @@
   }
   
   /* Responsive text display */
-  /* Mobile (≤480px): Icon only */
-  .btn-manage-variations .btn-text-full,
-  .btn-manage-variations .btn-text-short {
+  /* Default: Show short text */
+  .btn-manage-variations .btn-text-full {
     display: none;
   }
+  .btn-manage-variations .btn-text-short {
+    display: inline;
+  }
+  
+  /* Mobile (≤480px): Icon only */
   @media (max-width: 480px) {
     .btn-manage-variations {
       padding: 8px !important;
+    }
+    .btn-manage-variations .btn-text-short {
+      display: none;
     }
   }
   
@@ -422,6 +429,9 @@
   @media (min-width: 769px) {
     .btn-manage-variations .btn-text-full {
       display: inline;
+    }
+    .btn-manage-variations .btn-text-short {
+      display: none;
     }
   }
   
