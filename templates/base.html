@@ -813,7 +813,6 @@
 
             document.addEventListener('submit', function(){ if(!isVariationsPage) showLoader(); }, true);
             window.addEventListener('beforeunload', function(){ if(!isVariationsPage) showLoader(); });
-            window.addEventListener('popstate', function(){ if(!isVariationsPage) showLoader(); });
             
             // Desktop sidebar: toggle on button click
             if (sidebar && window.innerWidth > 1200) {
