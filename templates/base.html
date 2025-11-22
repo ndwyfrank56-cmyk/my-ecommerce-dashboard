@@ -680,8 +680,8 @@
                     </g>
                 </svg>
                 <div class="preloader__text">
-                    <p class="preloader__msg">Bringing you the goods…</p>
-                    <p class="preloader__msg preloader__msg--last">This is taking long. Something’s wrong.</p>
+                    <p class="preloader__msg">Loading page</p>
+                    <p class="preloader__msg preloader__msg--last">This is taking long. Something's wrong.</p>
                 </div>
             </div>
         </div>
@@ -959,6 +959,18 @@
         /* Dark theme compatibility */
         @media (prefers-color-scheme: dark) {
             .content .page-loader .cart__track { stroke: rgba(255,255,255,0.1); }
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .content .page-loader .cart { width: 6em; height: 6em; }
+            .content .page-loader .preloader { max-width: 18em; }
+        }
+
+        @media (max-width: 480px) {
+            .content .page-loader .cart { width: 5em; height: 5em; }
+            .content .page-loader .preloader { max-width: 16em; }
+            .content .page-loader .preloader__text { font-size: 14px; }
         }
 
         /* Animations */
