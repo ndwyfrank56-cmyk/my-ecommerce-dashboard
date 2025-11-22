@@ -842,14 +842,16 @@ async function previewAndUploadImage(varId, input){
 
 async function updateImgStock(id){
   const inp=document.getElementById(`img-stock-${id}`);
+  if(!inp) { showFlash('Stock input not found', 'error'); return; }
   const newStock=parseInt(inp.value);
+  if(isNaN(newStock) || newStock < 0) { showFlash('Invalid stock value', 'error'); return; }
   try{
     const r=await fetch(`/api/products/${pid}/image-variations/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({stock:newStock})});
     const d=await r.json();
-    if(!d.ok){ showFlash(d.error || 'Error loading variations', 'error'); return; }
+    if(!d.ok){ showFlash(d.error || 'Error updating stock', 'error'); return; }
     load();
     showFlash('Stock updated!', 'success');
-  }catch(e){ showFlash(e.message || String(e), 'error'); }
+  }catch(e){ showFlash('Error: ' + e.message || String(e), 'error'); }
 }
 function deleteImgVar(id){
   showConfirmModal(
