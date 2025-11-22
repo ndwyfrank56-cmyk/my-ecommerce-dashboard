@@ -634,40 +634,20 @@
       <!-- Register Form -->
       <form id="register-form" class="auth-form" role="tabpanel" method="POST" action="{{ url_for('register') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label for="username">Username</label>
-            <input type="text" id="username" name="username" required placeholder="Choose a username" minlength="3">
-          </div>
-          <div class="form-group">
-            <label for="email">Email</label>
-            <input type="email" id="email" name="email" required placeholder="Enter your email">
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label for="first_name">First Name</label>
-            <input type="text" id="first_name" name="first_name" required placeholder="First name">
-          </div>
-          <div class="form-group">
-            <label for="last_name">Last Name</label>
-            <input type="text" id="last_name" name="last_name" required placeholder="Last name">
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label for="phone">Phone</label>
-            <input type="tel" id="phone" name="phone" required placeholder="Phone number (10-15 digits)">
-          </div>
-          <div class="form-group">
-            <label for="city">City</label>
-            <input type="text" id="city" name="city" required placeholder="Your city">
-          </div>
+        <div style="background: rgba(46, 52, 64, 0.5); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 0.875rem 1rem; margin-bottom: 1.5rem;">
+          <p style="margin: 0; font-size: 0.875rem; color: var(--text-secondary); line-height: 1.5;">
+            <i class="fas fa-info-circle" style="color: rgba(255, 255, 255, 0.5); margin-right: 0.5rem;"></i>
+            <strong style="color: var(--text-primary);">Note:</strong> Only authorized workers can register. Use the email provided by your administrator.
+          </p>
         </div>
         <div class="form-group">
-          <label for="address">Address (Optional)</label>
-          <input type="text" id="address" name="address" placeholder="Street address">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" required placeholder="Enter your email">
+          <small id="email-validation" style="display: none; margin-top: 0.5rem; font-size: 0.85rem;"></small>
+        </div>
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" required placeholder="Choose a username" minlength="3">
         </div>
         <div class="form-group" style="position:relative;">
           <label for="password">Password</label>
