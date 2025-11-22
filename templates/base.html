@@ -796,6 +796,9 @@
             document.body.classList.add('page-in');
             // Loading overlay disabled - no loader initialization
 
+            // Check if we're on the variations page
+            const isVariationsPage = window.location.pathname.includes('/variations');
+
             document.addEventListener('click', function(e){
                 const link = e.target.closest('a[href]');
                 if(!link) return;
@@ -805,12 +808,12 @@
                 const url = new URL(href, window.location.href);
                 if(url.origin !== origin) return;
                 if(e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) return;
-                showLoader();
+                if(!isVariationsPage) showLoader();
             }, true);
 
-            document.addEventListener('submit', function(){ showLoader(); }, true);
-            window.addEventListener('beforeunload', function(){ showLoader(); });
-            window.addEventListener('popstate', function(){ showLoader(); });
+            document.addEventListener('submit', function(){ if(!isVariationsPage) showLoader(); }, true);
+            window.addEventListener('beforeunload', function(){ if(!isVariationsPage) showLoader(); });
+            window.addEventListener('popstate', function(){ if(!isVariationsPage) showLoader(); });
             
             // Desktop sidebar: toggle on button click
             if (sidebar && window.innerWidth > 1200) {
