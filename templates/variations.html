@@ -457,6 +457,35 @@
   </div>
 </div>
 
+<!-- Edit Image Variation Modal -->
+<div class="var-modal-overlay" id="modal-edit-img-var">
+  <div class="var-modal">
+    <div class="var-modal-header">
+      <div class="var-modal-title">Edit Image Variation</div>
+      <button type="button" class="var-modal-close" id="close-edit-img-var">✕</button>
+    </div>
+    <form class="var-modal-form" id="form-edit-img-var">
+      <input type="hidden" id="edit-img-var-id">
+      <div class="var-modal-field">
+        <label>Type</label>
+        <input type="text" id="edit-img-var-type" placeholder="e.g., Color, Size, Style" required>
+      </div>
+      <div class="var-modal-field">
+        <label>Name</label>
+        <input type="text" id="edit-img-var-name" placeholder="e.g., Red, Blue, Large" required>
+      </div>
+      <div class="var-modal-field">
+        <label>Description (Optional)</label>
+        <input type="text" id="edit-img-var-description" placeholder="Additional details">
+      </div>
+      <div class="var-modal-actions">
+        <button type="button" class="var-modal-btn-cancel" id="cancel-edit-img-var">Cancel</button>
+        <button type="submit" class="var-modal-btn-save">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- Edit Dropdown Variation Modal -->
 <div class="var-modal-overlay" id="modal-edit-drop-var">
   <div class="var-modal">
@@ -616,6 +645,7 @@ function renderImgVars(items){
         <div id="drops-${iv.id}">${iv.dropdowns&&iv.dropdowns.length?renderDrops(iv.dropdowns):'<p style="font-size:12px;color:rgba(255,255,255,0.4);">No dropdowns.</p>'}</div>
       </div>
       <div class="var-actions">
+        <button class="btn-update" onclick="editImgVar(${iv.id},'${iv.type.replace(/'/g, "\\'")}','${iv.name.replace(/'/g, "\\'")}','${(iv.description || '').replace(/'/g, "\\'")}')" style="background:#3b82f6;">Edit</button>
         <button class="btn-update" onclick="updateImgStock(${iv.id})">Update Stock</button>
         <button class="btn-add-drop" onclick="openAddDrop(${iv.id})">+ Dropdown</button>
         <button class="btn-remove" onclick="deleteImgVar(${iv.id})">Remove</button>
@@ -689,6 +719,16 @@ if(closeImgBtn) closeImgBtn.addEventListener('click', () => closeModalById('moda
 if(cancelImgBtn) cancelImgBtn.addEventListener('click', () => closeModalById('modal-img-var'));
 if(closeDropBtn) closeDropBtn.addEventListener('click', () => closeModalById('modal-drop-var'));
 if(cancelDropBtn) cancelDropBtn.addEventListener('click', () => closeModalById('modal-drop-var'));
+
+// Edit image variation modal event listeners
+const closeEditImgBtn = document.getElementById('close-edit-img-var');
+const cancelEditImgBtn = document.getElementById('cancel-edit-img-var');
+if(closeEditImgBtn) closeEditImgBtn.addEventListener('click', () => closeModalById('modal-edit-img-var'));
+if(cancelEditImgBtn) cancelEditImgBtn.addEventListener('click', () => closeModalById('modal-edit-img-var'));
+
+// Edit image variation form submit handler
+const editImgForm = document.getElementById('form-edit-img-var');
+if(editImgForm) editImgForm.addEventListener('submit', saveEditImgVar);
 
 // Edit dropdown modal event listeners
 const closeEditDropBtn = document.getElementById('close-edit-drop-var');
@@ -867,6 +907,41 @@ function deleteImgVar(id){
     }
   );
 }
+
+function editImgVar(id, type, name, description){
+  document.getElementById('edit-img-var-id').value = id;
+  document.getElementById('edit-img-var-type').value = type;
+  document.getElementById('edit-img-var-name').value = name;
+  document.getElementById('edit-img-var-description').value = description;
+  openModal('modal-edit-img-var');
+}
+
+async function saveEditImgVar(e){
+  e.preventDefault();
+  const id = document.getElementById('edit-img-var-id').value;
+  const type = document.getElementById('edit-img-var-type').value.trim();
+  const name = document.getElementById('edit-img-var-name').value.trim();
+  const description = document.getElementById('edit-img-var-description').value.trim();
+  
+  if(!type || !name){
+    showFlash('Type and Name are required', 'error');
+    return;
+  }
+  
+  try{
+    const r = await fetch(`/api/products/${pid}/image-variations/${id}`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({type, name, description})
+    });
+    const d = await r.json();
+    if(!d.ok){ showFlash(d.error || 'Error updating image variation', 'error'); return; }
+    showFlash('Image variation updated!', 'success');
+    closeModalById('modal-edit-img-var');
+    load();
+  }catch(e){ showFlash(e.message || String(e), 'error'); }
+}
+
 // Batch dropdown management
 let batchDropdowns = [];
 let currentImgVarId = null;

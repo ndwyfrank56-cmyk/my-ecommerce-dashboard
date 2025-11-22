@@ -3068,7 +3068,7 @@ def api_add_image_variation(pid):
             pass
         return jsonify({"ok": False, "error": str(e)}), 500
 
-# Update image variation stock
+# Update image variation stock, name, type, description, or image
 @app.route('/api/products/<int:pid>/image-variations/<int:img_var_id>', methods=['PUT'])
 @csrf.exempt
 def api_update_image_variation(pid, img_var_id):
@@ -3076,9 +3076,12 @@ def api_update_image_variation(pid, img_var_id):
         data = request.get_json() or {}
         new_stock = data.get('stock')
         new_img_url = data.get('img_url')
+        new_type = data.get('type')
+        new_name = data.get('name')
+        new_description = data.get('description')
         
-        if new_stock is None and new_img_url is None:
-            return jsonify({"ok": False, "error": "Missing stock or img_url"}), 400
+        if all(v is None for v in [new_stock, new_img_url, new_type, new_name, new_description]):
+            return jsonify({"ok": False, "error": "No fields to update"}), 400
         
         cur = mysql.connection.cursor()
         
@@ -3106,6 +3109,18 @@ def api_update_image_variation(pid, img_var_id):
         if new_img_url is not None:
             update_parts.append("img_url=%s")
             update_values.append(new_img_url)
+        
+        if new_type is not None:
+            update_parts.append("type=%s")
+            update_values.append(new_type)
+        
+        if new_name is not None:
+            update_parts.append("name=%s")
+            update_values.append(new_name)
+        
+        if new_description is not None:
+            update_parts.append("description=%s")
+            update_values.append(new_description)
         
         if update_parts:
             update_values.append(img_var_id)
