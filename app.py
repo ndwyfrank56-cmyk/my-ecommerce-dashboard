@@ -610,7 +610,7 @@ def api_payment_status():
             JOIN orders o ON p.order_id = o.id
             WHERE p.status = 'SUCCESSFUL'
             AND LOWER(TRIM(o.payment_status)) = 'paid'
-            {date_filter.replace('WHERE', 'AND')}
+            {date_filter}
         """
         cur.execute(query5)
         paid_revenue = cur.fetchone()[0] or 0.0

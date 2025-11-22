@@ -767,7 +767,7 @@
             const pageProgress = document.getElementById('pageProgress');
             const pageLoader = document.getElementById('pageLoader');
             const origin = window.location.origin;
-            function showLoader(){ /* Loading overlay disabled */ }
+            function showLoader(){ pageLoader.classList.add('active'); }
 
             // Open sidebar
             hamburger.addEventListener('click', function() {
