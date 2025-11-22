@@ -796,8 +796,14 @@
             document.body.classList.add('page-in');
             // Loading overlay disabled - no loader initialization
 
-            // Check if we're on the variations page
+            // Check if we're on the     variations page
             const isVariationsPage = window.location.pathname.includes('/variations');
+
+            // Hide loader when page fully loads
+            window.addEventListener('load', function(){ pageLoader.classList.remove('active'); });
+            
+            // Hide loader on popstate (back/forward button)
+            window.addEventListener('popstate', function(){ pageLoader.classList.remove('active'); });
 
             document.addEventListener('click', function(e){
                 const link = e.target.closest('a[href]');
