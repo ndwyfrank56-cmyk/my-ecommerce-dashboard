@@ -934,7 +934,7 @@
     </script>
     <style>
         /* Loader container visibility control */
-        .content .page-loader { position: absolute; inset: 0; display: grid; place-items: center; z-index: 10000; background: transparent; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .15s ease; }
+        .content .page-loader { position: absolute; inset: 0; display: grid; place-items: center; z-index: 10000; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .15s ease; }
         .content .page-loader.active { opacity: 1; visibility: visible; }
 
         /* Scoped preloader styles */
