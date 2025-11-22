@@ -757,18 +757,6 @@
   </div>
 </div>
 
-<!-- Confirmation Modal (for deletes/actions) -->
-<div id="confirm-overlay" class="confirm-overlay" style="display:none;">
-  <div class="confirm-modal">
-    <h3 class="confirm-title" id="confirm-title">Are you sure?</h3>
-    <p class="confirm-message" id="confirm-message">This action cannot be undone.</p>
-    <div class="confirm-buttons">
-      <button class="confirm-btn confirm-cancel" id="confirm-cancel">Cancel</button>
-      <button class="confirm-btn confirm-yes" id="confirm-yes">Yes, Continue</button>
-    </div>
-  </div>
-</div>
-
 <!-- Permissions Modal -->
 <div id="permissionsModal" class="x-modal-overlay">
   <div class="x-modal">
@@ -935,84 +923,43 @@
       });
   }
   
-  // Confirmation Modal Handler
-  (function(){
-    const confirmOverlay = document.getElementById('confirm-overlay');
-    const confirmTitle = document.getElementById('confirm-title');
-    const confirmMessage = document.getElementById('confirm-message');
-    const confirmYes = document.getElementById('confirm-yes');
-    const confirmCancel = document.getElementById('confirm-cancel');
-    let confirmCallback = null;
-
-    window.showConfirm = function(title, message, callback){
-      confirmTitle.textContent = title;
-      confirmMessage.textContent = message;
-      confirmCallback = callback;
-      confirmOverlay.style.display = 'flex';
-    }
-
-    window.hideConfirm = function(){
-      confirmOverlay.style.display = 'none';
-      confirmCallback = null;
-          }
-
-    confirmYes.addEventListener('click', () => {
-      if(confirmCallback) {
-        confirmCallback();
-      }
-    });
-
-    confirmCancel.addEventListener('click', hideConfirm);
-  })();
   
   function deleteWorker(id) {
-    showConfirm(
-      'Delete User?',
-      'Are you sure you want to delete this user? This action cannot be undone.',
-      () => {
-        fetch(`/workers/delete/${id}`, { method: 'POST' })
-          .then(res => res.json())
-          .then(data => {
-            hideConfirm();
-            if (data.ok) {
-              showAlert('User deleted successfully!', 'success');
-              setTimeout(() => location.reload(), 1000);
-            } else {
-              showAlert('Error: ' + data.error, 'error');
-            }
-          })
-          .catch(err => {
-            hideConfirm();
-            console.error('Error deleting user:', err);
-            showAlert('Error deleting user', 'error');
-          });
-      }
-    );
+    if(confirm('Delete User?\n\nAre you sure you want to delete this user? This action cannot be undone.')) {
+      fetch(`/workers/delete/${id}`, { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+          if (data.ok) {
+            showAlert('User deleted successfully!', 'success');
+            setTimeout(() => location.reload(), 1000);
+          } else {
+            showAlert('Error: ' + data.error, 'error');
+          }
+        })
+        .catch(err => {
+          console.error('Error deleting user:', err);
+          showAlert('Error deleting user', 'error');
+        });
+    }
   }
   
   function deleteWorkerConfirm(id) {
-    showConfirm(
-      'Delete User?',
-      'This will permanently remove:\n• User account\n• Login credentials\n• Page permissions\n\nThis action cannot be undone!',
-      () => {
-        fetch(`/workers/delete/${id}`, { method: 'POST' })
-          .then(res => res.json())
-          .then(data => {
-            hideConfirm();
-            if (data.ok) {
-              showAlert('User deleted successfully!', 'success');
-              setTimeout(() => location.reload(), 1000);
-            } else {
-              showAlert('Error: ' + data.error, 'error');
-            }
-          })
-          .catch(err => {
-            hideConfirm();
-            console.error('Error deleting user:', err);
-            showAlert('Error deleting user', 'error');
-          });
-      }
-    );
+    if(confirm('Delete User?\n\nThis will permanently remove:\n• User account\n• Login credentials\n• Page permissions\n\nThis action cannot be undone!')) {
+      fetch(`/workers/delete/${id}`, { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+          if (data.ok) {
+            showAlert('User deleted successfully!', 'success');
+            setTimeout(() => location.reload(), 1000);
+          } else {
+            showAlert('Error: ' + data.error, 'error');
+          }
+        })
+        .catch(err => {
+          console.error('Error deleting user:', err);
+          showAlert('Error deleting user', 'error');
+        });
+    }
   }
   
   function closeModal() {

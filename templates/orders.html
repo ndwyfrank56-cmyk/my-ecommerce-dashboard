@@ -35,16 +35,17 @@
     </div>
   </div>
 
-  <!-- Leaflet for map -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <section class="orders-section">
+    <!-- Leaflet for map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', function(){
-      const overlay = document.getElementById('modal-overlay');
-      const body = document.getElementById('modal-body');
-      const title = document.getElementById('modal-title');
-      const closeBtn = document.getElementById('modal-close');
+    <script>
+      document.addEventListener('DOMContentLoaded', function(){
+        const overlay = document.getElementById('modal-overlay');
+        const body = document.getElementById('modal-body');
+        const title = document.getElementById('modal-title');
+        const closeBtn = document.getElementById('modal-close');
 
       function openModal(t, html){
         title.textContent = t || 'Details';
@@ -278,8 +279,7 @@
       line-height: 1;
     }
     .modal-close-btn:hover {
-      color: #fff;
-      transform: rotate(90deg);
+      color: rgba(255,255,255,0.8);
     }
     .confirm-title {
       font-size: 20px;
@@ -589,39 +589,6 @@
         }
       }
 
-      // Confirmation modal functions
-      const confirmOverlay = document.getElementById('confirm-overlay');
-      const confirmTitle = document.getElementById('confirm-title');
-      const confirmMessage = document.getElementById('confirm-message');
-      const confirmYes = document.getElementById('confirm-yes');
-      const confirmCancel = document.getElementById('confirm-cancel');
-      const modalCloseBtn = document.getElementById('modal-close-btn');
-      let confirmCallback = null;
-
-      function showConfirm(title, message, callback){
-        confirmTitle.textContent = title;
-        confirmMessage.textContent = message;
-        confirmCallback = callback;
-        confirmOverlay.style.display = 'flex';
-      }
-
-      function hideConfirm(){
-        confirmOverlay.style.display = 'none';
-        confirmCallback = null;
-      }
-
-      confirmYes.addEventListener('click', () => {
-        if(confirmCallback) confirmCallback();
-        hideConfirm();
-      });
-
-      confirmCancel.addEventListener('click', hideConfirm);
-      modalCloseBtn.addEventListener('click', hideConfirm);
-      
-      // Click outside modal to close
-      confirmOverlay.addEventListener('click', (e) => {
-        if(e.target === confirmOverlay) hideConfirm();
-      });
 
       document.querySelectorAll('.order-item').forEach(card => {
         const editBtn = card.querySelector('.btn-assign[data-oid]');
@@ -634,63 +601,51 @@
             const current = (editBtn.getAttribute('data-delivered')||'').toLowerCase();
             const next = current === 'yes' ? 'no' : 'yes';
             const action = next === 'yes' ? 'DELIVERED' : 'NOT DELIVERED';
-            showConfirm(
-              `Mark as ${action}?`,
-              `Order ${oid} will be marked as ${action}. ${next === 'yes' ? 'Payment status will be updated to PAID.' : ''}`,
-              async () => {
-                try {
-                  const res = await fetch(`/api/orders/${oid}/delivered`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ value: next }) });
-                  const data = await res.json();
-                  if (!data.ok) { showFlash(data.error || 'Failed to update', 'error'); return; }
-                  // Reload page to refresh all data
-                  location.reload();
-                } catch (e) {
-                  showFlash(e.message || 'An error occurred', 'error');
-                }
+            if(confirm(`Mark as ${action}?\n\nOrder ${oid} will be marked as ${action}. ${next === 'yes' ? 'Payment status will be updated to PAID.' : ''}`)){
+              try {
+                const res = await fetch(`/api/orders/${oid}/delivered`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ value: next }) });
+                const data = await res.json();
+                if (!data.ok) { showFlash(data.error || 'Failed to update', 'error'); return; }
+                // Reload page to refresh all data
+                location.reload();
+              } catch (e) {
+                showFlash(e.message || 'An error occurred', 'error');
               }
-            );
+            }
           });
         }
         if (delBtn) {
           delBtn.addEventListener('click', async () => {
             const oid = delBtn.getAttribute('data-oid');
-            showConfirm(
-              'Cancel Order?',
-              `Order ${oid} will be CANCELLED. This will mark the order as cancelled and update the payment status.`,
-              async () => {
-                try {
-                  const res = await fetch(`/api/orders/${oid}/cancel`, { method: 'POST' });
-                  const data = await res.json();
-                  if (!data.ok) { showFlash(data.error || 'Failed to cancel', 'error'); return; }
-                  // Reload page to refresh all data
-                  location.reload();
-                } catch (e) {
-                  showFlash(e.message || 'An error occurred', 'error');
-                }
+            if(confirm(`Cancel Order?\n\nOrder ${oid} will be CANCELLED. This will mark the order as cancelled and update the payment status.`)){
+              try {
+                const res = await fetch(`/api/orders/${oid}/cancel`, { method: 'POST' });
+                const data = await res.json();
+                if (!data.ok) { showFlash(data.error || 'Failed to cancel', 'error'); return; }
+                // Reload page to refresh all data
+                location.reload();
+              } catch (e) {
+                showFlash(e.message || 'An error occurred', 'error');
               }
-            );
+            }
           });
         }
         if (deleteBtn) {
           deleteBtn.addEventListener('click', async () => {
             const oid = deleteBtn.getAttribute('data-oid');
-            showConfirm(
-              'Delete Order?',
-              `Order ${oid} will be PERMANENTLY DELETED. This action cannot be undone. Are you sure?`,
-              async () => {
-                try {
-                  const res = await fetch(`/api/orders/${oid}/delete`, { method: 'DELETE' });
-                  const data = await res.json();
-                  if (!data.ok) { showFlash(data.error || 'Failed to delete', 'error'); return; }
-                  // Show success flash message before reloading
-                  showFlash(`Order #${oid} has been deleted successfully.`, 'success');
-                  // Reload page to refresh all data
-                  setTimeout(() => location.reload(), 1500);
-                } catch (e) {
-                  showFlash(e.message || 'An error occurred', 'error');
-                }
+            if(confirm(`Delete Order?\n\nOrder ${oid} will be PERMANENTLY DELETED. This action cannot be undone. Are you sure?`)){
+              try {
+                const res = await fetch(`/api/orders/${oid}/delete`, { method: 'DELETE' });
+                const data = await res.json();
+                if (!data.ok) { showFlash(data.error || 'Failed to delete', 'error'); return; }
+                // Show success flash message before reloading
+                showFlash(`Order #${oid} has been deleted successfully.`, 'success');
+                // Reload page to refresh all data
+                setTimeout(() => location.reload(), 1500);
+              } catch (e) {
+                showFlash(e.message || 'An error occurred', 'error');
               }
-            );
+            }
           });
         }
       });
