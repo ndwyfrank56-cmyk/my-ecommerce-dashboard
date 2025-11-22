@@ -265,65 +265,38 @@
       font-weight: 400;
     }
 
-    /* Tabs */
+    /* Tabs - Horizontal Sections Style */
     .auth-tabs {
       display: flex;
       margin-bottom: 2rem;
-      gap: 0.5rem;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
     }
 
     .tab-btn {
       position: relative;
       flex: 1;
-      padding: 0.7rem 1.1rem;
-      background: rgba(21,25,34,0.6);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 999px;
+      padding: 1rem 1.5rem;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
       color: var(--text-secondary);
-      font-weight: 800;
-      font-size: 0.92rem;
+      font-weight: 600;
+      font-size: 0.95rem;
       cursor: pointer;
-      transition: transform .2s ease, box-shadow .25s ease, color .25s ease, background .25s ease, border-color .25s ease;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      box-shadow: 0 6px 14px rgba(0,0,0,0.15);
-      overflow: hidden;
-      isolation: isolate;
-    }
-
-    .tab-btn::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      padding: 1px;
-      background: linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0.08));
-      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-      mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-      -webkit-mask-composite: xor;
-      mask-composite: exclude;
-      pointer-events: none;
-      opacity: .0;
-      transition: opacity .25s ease;
+      transition: all 0.2s ease;
+      text-align: center;
     }
 
     .tab-btn.active {
-      background: rgba(255,255,255,0.12);
-      border-color: rgba(255,255,255,0.45);
       color: var(--text-primary);
-      box-shadow: 0 12px 24px rgba(0,0,0,0.2);
-      transform: none;
+      border-bottom-color: rgba(255, 255, 255, 0.8);
+      background: rgba(255, 255, 255, 0.05);
     }
 
-    .tab-btn.active::before {
-      opacity: 1;
-    }
-
-    .tab-btn:not(.active):hover {
-      background: rgba(21,25,34,0.8);
-      border-color: rgba(255,255,255,0.2);
+    .tab-btn:hover {
       color: var(--text-primary);
-      transform: none;
+      background: rgba(255, 255, 255, 0.03);
     }
 
     /* Forms */
@@ -380,6 +353,35 @@
       color: var(--text-light);
       opacity: .8;
       letter-spacing: .01em;
+    }
+
+    /* Password visibility toggle */
+    .toggle-visibility {
+      position: absolute;
+      right: 12px;
+      top: 38px;
+      width: 32px;
+      height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      z-index: 2;
+    }
+    .toggle-visibility:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+    /* Make space for the eye inside password inputs */
+    input[type="password"], input[type="text"].password-visible { padding-right: 45px; }
+    .form-group { position: relative; }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
     }
 
     /* Password Strength */
@@ -516,12 +518,17 @@
       }
 
       .auth-tabs {
-        flex-direction: column;
-        gap: 0.75rem;
+        flex-direction: row;
+        gap: 0;
       }
 
       .tab-btn {
-        border-radius: 999px !important;
+        border-radius: 0;
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+        gap: 1rem;
       }
 
       .navbar-bottom .navbar-container {
@@ -604,17 +611,20 @@
       <!-- Login Form -->
       <form id="login-form" class="auth-form active" role="tabpanel" method="POST" action="{{ url_for('login') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
         <div class="form-group">
           <label for="login-username">Username or Email</label>
-          <input type="text" id="login-username" name="username" required placeholder="Enter username or email" aria-describedby="login-help">
-          <small id="login-help" class="text-light">We'll use this to sign you in.</small>
+          <input type="text" id="login-username" name="username" required placeholder="Enter username or email">
         </div>
-        <div class="form-group">
+        <div class="form-group" style="position:relative;">
           <label for="login-password">Password</label>
           <input type="password" id="login-password" name="password" required placeholder="Enter password">
+          <button class="toggle-visibility" type="button" aria-label="Show password" onclick="togglePassword('login-password', this)"><i class="fas fa-eye"></i></button>
         </div>
         <div style="text-align: right; margin-bottom: 1rem;">
-          <a href="{{ url_for('forgot_password') }}" class="forgot-password-link" style="color: var(--text-secondary); text-decoration: none; font-size: 0.9rem; transition: color 0.2s; font-weight: 500;">Forgot Password?</a>
+          <a href="{{ url_for('forgot_password') }}" style="color: rgba(229, 231, 235, 0.7); text-decoration: none; font-size: 0.9rem; font-weight: 400; transition: all 0.2s ease; border: none; background: none; padding: 0;" onmouseover="this.style.color='rgba(229, 231, 235, 0.9)'" onmouseout="this.style.color='rgba(229, 231, 235, 0.7)'">
+            Forgot Password?
+          </a>
         </div>
         <button type="submit" class="submit-btn">
           <i class="fas fa-sign-in-alt"></i> Sign In
@@ -624,24 +634,45 @@
       <!-- Register Form -->
       <form id="register-form" class="auth-form" role="tabpanel" method="POST" action="{{ url_for('register') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div style="background: rgba(46, 52, 64, 0.5); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 0.875rem 1rem; margin-bottom: 1.5rem;">
-          <p style="margin: 0; font-size: 0.875rem; color: var(--text-secondary); line-height: 1.5;">
-            <i class="fas fa-info-circle" style="color: rgba(255, 255, 255, 0.5); margin-right: 0.5rem;"></i>
-            <strong style="color: var(--text-primary);">Note:</strong> Only authorized workers can register. Use the email provided by your administrator.
-          </p>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" required placeholder="Choose a username" minlength="3">
+          </div>
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" required placeholder="Enter your email">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="first_name">First Name</label>
+            <input type="text" id="first_name" name="first_name" required placeholder="First name">
+          </div>
+          <div class="form-group">
+            <label for="last_name">Last Name</label>
+            <input type="text" id="last_name" name="last_name" required placeholder="Last name">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="phone">Phone</label>
+            <input type="tel" id="phone" name="phone" required placeholder="Phone number (10-15 digits)">
+          </div>
+          <div class="form-group">
+            <label for="city">City</label>
+            <input type="text" id="city" name="city" required placeholder="Your city">
+          </div>
         </div>
         <div class="form-group">
-          <label for="email">Email</label>
-          <input type="email" id="email" name="email" required placeholder="Enter your email">
-          <small id="email-validation" style="display: none; margin-top: 0.5rem; font-size: 0.85rem;"></small>
+          <label for="address">Address (Optional)</label>
+          <input type="text" id="address" name="address" placeholder="Street address">
         </div>
-        <div class="form-group">
-          <label for="username">Username</label>
-          <input type="text" id="username" name="username" required placeholder="Choose a username" minlength="3">
-        </div>
-        <div class="form-group">
+        <div class="form-group" style="position:relative;">
           <label for="password">Password</label>
           <input type="password" id="password" name="password" required placeholder="Create a password" minlength="8">
+          <button class="toggle-visibility" type="button" aria-label="Show password" onclick="togglePassword('password', this)"><i class="fas fa-eye"></i></button>
           <div class="password-strength">
             <div class="password-strength-bar"></div>
           </div>
@@ -653,9 +684,10 @@
             <div class="requirement" id="req-special"><i class="fas fa-times"></i> One special character</div>
           </div>
         </div>
-        <div class="form-group">
+        <div class="form-group" style="position:relative;">
           <label for="confirm_password">Confirm Password</label>
           <input type="password" id="confirm_password" name="confirm_password" required placeholder="Confirm your password">
+          <button class="toggle-visibility" type="button" aria-label="Show password" onclick="togglePassword('confirm_password', this)"><i class="fas fa-eye"></i></button>
         </div>
         <button type="submit" class="submit-btn" disabled>
           <i class="fas fa-user-plus"></i> Create Account
@@ -789,7 +821,46 @@
         });
       }
 
+      // Form submission loading state
+      document.querySelectorAll('form').forEach(form => {
+        form.addEventListener('submit', function() {
+          const btn = this.querySelector('button[type="submit"]');
+          btn.innerHTML = btn.innerHTML.replace('</i>', '<span class="loading-spinner"></span></i>');
+          btn.disabled = true;
+        });
+      });
     });
+
+    // Toggle password visibility
+    function togglePassword(id, btn){
+      const input = document.getElementById(id);
+      if (!input) return;
+      const isPwd = input.type === 'password';
+      input.type = isPwd ? 'text' : 'password';
+      const icon = btn.querySelector('i');
+      if (icon) icon.className = isPwd ? 'fas fa-eye-slash' : 'fas fa-eye';
+      btn.setAttribute('aria-label', isPwd ? 'Hide password' : 'Show password');
+    }
+
+    // Loading spinner styles
+    const style = document.createElement('style');
+    style.textContent = `
+      .loading-spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(17, 19, 24, 0.3);
+        border-top: 2px solid #111318;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        display: inline-block;
+        margin-left: 0.5rem;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    `;
+    document.head.appendChild(style);
   </script>
 </body>
 </html>
