@@ -350,6 +350,23 @@
     transition: none;
   }
   
+  /* Mobile button sizing */
+  @media (max-width: 600px) {
+    .order-buttons .btn-assign,
+    .order-buttons .btn-print {
+      font-size: 11px;
+      padding: 6px 8px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .order-buttons .btn-assign,
+    .order-buttons .btn-print {
+      font-size: 10px;
+      padding: 5px 6px;
+    }
+  }
+  
   .no-orders-message {
     grid-column: 1 / -1;
     text-align: center;
