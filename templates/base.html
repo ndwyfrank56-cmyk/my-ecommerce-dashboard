@@ -661,24 +661,7 @@
     <main class="content">
         <div id="pageLoader" class="page-loader" aria-hidden="true">
             <div class="preloader">
-                <svg class="cart" role="img" aria-label="Shopping cart line animation" viewBox="0 0 128 128" width="128" height="128" xmlns="http://www.w3.org/2000/svg">
-                    <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="8">
-                        <g class="cart__track">
-                            <polyline points="4,4 21,4 26,22 124,22 112,64 35,64 39,80 106,80" />
-                            <circle cx="43" cy="111" r="13" />
-                            <circle cx="102" cy="111" r="13" />
-                        </g>
-                        <g class="cart__lines">
-                            <polyline class="cart__top" points="4,4 21,4 26,22 124,22 112,64 35,64 39,80 106,80" stroke-dasharray="338 338" stroke-dashoffset="-338" />
-                            <g class="cart__wheel1" transform="rotate(-90,43,111)">
-                                <circle class="cart__wheel-stroke" cx="43" cy="111" r="13" stroke-dasharray="81.68 81.68" stroke-dashoffset="81.68" />
-                            </g>
-                            <g class="cart__wheel2" transform="rotate(90,102,111)">
-                                <circle class="cart__wheel-stroke" cx="102" cy="111" r="13" stroke-dasharray="81.68 81.68" stroke-dashoffset="81.68" />
-                            </g>
-                        </g>
-                    </g>
-                </svg>
+                <div class="spinner"></div>
                 <div class="preloader__text">
                     <p class="preloader__msg">Loading page</p>
                     <p class="preloader__msg preloader__msg--last">This is taking long. Something's wrong.</p>
@@ -943,43 +926,23 @@
         .content .page-loader .preloader__msg { position: absolute; width: 100%; opacity: 1; animation: loader-msg 0.3s 13.7s linear forwards; }
         .content .page-loader .preloader__msg--last { animation-direction: reverse; animation-delay: 14s; visibility: hidden; }
 
-        .content .page-loader .cart { display: block; margin: 0 auto 1.5em auto; width: 8em; height: 8em; color: #8b5cf6; }
-        .content .page-loader .cart__lines,
-        .content .page-loader .cart__top,
-        .content .page-loader .cart__wheel1,
-        .content .page-loader .cart__wheel2,
-        .content .page-loader .cart__wheel-stroke { animation: cartLines 2s ease-in-out infinite; }
-        .content .page-loader .cart__lines { stroke: currentColor; }
-        .content .page-loader .cart__track { stroke: rgba(255,255,255,0.1); }
-        .content .page-loader .cart__top { animation-name: cartTop; }
-        .content .page-loader .cart__wheel1 { animation-name: cartWheel1; transform: rotate(-0.25turn); transform-origin: 43px 111px; }
-        .content .page-loader .cart__wheel2 { animation-name: cartWheel2; transform: rotate(0.25turn); transform-origin: 102px 111px; }
-        .content .page-loader .cart__wheel-stroke { animation-name: cartWheelStroke; }
-
-        /* Dark theme compatibility */
-        @media (prefers-color-scheme: dark) {
-            .content .page-loader .cart__track { stroke: rgba(255,255,255,0.1); }
-        }
+        .content .page-loader .spinner { display: block; margin: 0 auto 1.5em auto; width: 3em; height: 3em; border: 3px solid rgba(139, 92, 246, 0.2); border-top: 3px solid #8b5cf6; border-radius: 50%; animation: spin 1s linear infinite; }
 
         /* Mobile responsiveness */
         @media (max-width: 768px) {
-            .content .page-loader .cart { width: 6em; height: 6em; }
+            .content .page-loader .spinner { width: 2.5em; height: 2.5em; }
             .content .page-loader .preloader { max-width: 18em; }
         }
 
         @media (max-width: 480px) {
-            .content .page-loader .cart { width: 5em; height: 5em; }
+            .content .page-loader .spinner { width: 2em; height: 2em; }
             .content .page-loader .preloader { max-width: 16em; }
             .content .page-loader .preloader__text { font-size: 14px; }
         }
 
         /* Animations */
         @keyframes loader-msg { from { opacity: 1; visibility: visible; } 99.9% { opacity: 0; visibility: visible; } to { opacity: 0; visibility: hidden; } }
-        @keyframes cartLines { from, to { opacity: 0; } 8%, 92% { opacity: 1; } }
-        @keyframes cartTop { from { stroke-dashoffset: -338; } 50% { stroke-dashoffset: 0; } to { stroke-dashoffset: 338; } }
-        @keyframes cartWheel1 { from { transform: rotate(-0.25turn); } to { transform: rotate(2.75turn); } }
-        @keyframes cartWheel2 { from { transform: rotate(0.25turn); } to { transform: rotate(3.25turn); } }
-        @keyframes cartWheelStroke { from, to { stroke-dashoffset: 81.68; } 50% { stroke-dashoffset: 40.84; } }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     </style>
     </body>
     </html>
