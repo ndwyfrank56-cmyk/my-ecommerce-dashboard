@@ -1325,6 +1325,10 @@ function exportToExcel() {
         if (text.includes('RWF')) {
           cssClass = 'currency';
           // Keep RWF for clarity in Excel
+        } else if (text.startsWith('+') || (text.match(/^\d{10,}$/) && text.length >= 10)) {
+          // Phone number - force as text with leading apostrophe
+          cssClass = 'phone';
+          displayText = "'" + text;
         } else if (!isNaN(text.replace(/,/g, '')) && text.length > 0 && !text.includes('Date')) {
           cssClass = 'number';
         }
