@@ -195,11 +195,6 @@
           <span class="status-badge status-delivered">{{ (c.tier or 'CUSTOMER') }}</span>
         </div>
 
-        <div class="order-actions">
-          <button class="icon-btn btn-email-customer" data-email="{{ c.email or '' }}" data-name="{{ c.name or '' }}" {% if not c.email %}disabled{% endif %} title="Send Email"><i class="fa fa-envelope"></i></button>
-          <button class="icon-btn btn-delete-customer" data-user-id="{{ c.user_id or '' }}" {% if not c.user_id %}disabled{% endif %} title="Delete"><i class="fa fa-trash"></i></button>
-        </div>
-
         <div class="customer-name">{{ c.name or 'Unknown' }}</div>
 
         <div class="order-info">
