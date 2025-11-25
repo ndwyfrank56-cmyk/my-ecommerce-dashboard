@@ -213,6 +213,7 @@
 
         <div class="order-buttons">
           <button class="btn-assign btn-view-orders" data-user-id="{{ c.user_id or '' }}" data-phone="{{ c.phone or '' }}" data-name="{{ c.name or '' }}">View Orders</button>
+          <button class="btn-print btn-delete-customer-inline" data-user-id="{{ c.user_id or '' }}" {% if not c.user_id %}disabled{% endif %} style="background: #ef4444 !important; color: white !important;">Delete</button>
         </div>
       </div>
       {% else %}
@@ -793,6 +794,39 @@
 
     // Delete customer handler (registered customers only)
     document.querySelectorAll('.order-item .btn-delete-customer').forEach(btn=>{
+      btn.addEventListener('click', async (e)=>{
+        const uid = btn.getAttribute('data-user-id');
+        if (!uid) { 
+          showConfirm('Cannot Delete', 'Only registered customers can be deleted.', () => {});
+          return; 
+        }
+        const card = btn.closest('.order-item');
+        
+        showConfirm(
+          'Delete Customer?',
+          'Delete this customer? Orders will remain but be detached from the user account.',
+          async () => {
+            btn.disabled = true;
+            try{
+              const res = await fetch('/api/customers/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: uid }) });
+              const data = await res.json();
+              if(!data.ok){ 
+                showConfirm('Error', data.error || 'Delete failed', () => {});
+                btn.disabled = false; 
+                return; 
+              }
+              if(card) card.remove();
+            }catch(err){
+              showConfirm('Error', err && err.message || 'Delete failed', () => {});
+              btn.disabled = false;
+            }
+          }
+        );
+      });
+    });
+
+    // Delete customer handler for inline button (registered customers only)
+    document.querySelectorAll('.order-item .btn-delete-customer-inline').forEach(btn=>{
       btn.addEventListener('click', async (e)=>{
         const uid = btn.getAttribute('data-user-id');
         if (!uid) { 
