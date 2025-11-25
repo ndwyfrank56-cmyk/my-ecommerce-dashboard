@@ -1297,15 +1297,12 @@ function exportToExcel() {
       // Skip hidden rows (filtered out by search)
       if (row.style.display === 'none') return;
       
-      // Skip footer rows (tfoot)
-      if (row.closest('tfoot')) return;
-      
       const cells = row.querySelectorAll('th, td');
       if (cells.length === 0) return;
       
-      // Skip rows with summary text (contains "GRAND TOTAL")
+      // Skip rows with messy summary text (multiple fields in one cell)
       let rowText = row.innerText.toUpperCase();
-      if (rowText.includes('GRAND TOTAL') && rowText.includes('TOTAL REVENUE')) return;
+      if (rowText.includes('GRAND TOTAL') && rowText.includes('TOTAL REVENUE') && rowText.includes('AVG ORDER VALUE')) return;
       
       html += '<tr>';
       cells.forEach(cell => {
