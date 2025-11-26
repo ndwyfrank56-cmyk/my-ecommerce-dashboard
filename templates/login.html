@@ -629,6 +629,14 @@
         <button type="submit" class="submit-btn">
           <i class="fas fa-sign-in-alt"></i> Sign In
         </button>
+        
+        <div style="margin-top: 1.5rem; text-align: center;">
+          <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">Or continue with</p>
+          <a href="{{ url_for('auth_google') }}" class="google-btn" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.6rem; padding: 0.85rem 1.6rem; width: 100%; border-radius: 999px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-weight: 600; font-size: 0.98rem; text-decoration: none; transition: all 0.2s ease; box-shadow: 0 8px 18px rgba(0,0,0,0.22);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle></svg>
+            Sign in with Google
+          </a>
+        </div>
       </form>
 
       <!-- Register Form -->
