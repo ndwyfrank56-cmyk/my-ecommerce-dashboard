@@ -1727,9 +1727,9 @@ def api_delete_customer():
         cur = mysql.connection.cursor()
         try:
             # Get customer name for flash message
-            cur.execute("SELECT name FROM users WHERE id = %s", (user_id,))
+            cur.execute("SELECT CONCAT(COALESCE(first_name,''), ' ', COALESCE(last_name,'')) FROM users WHERE id = %s", (user_id,))
             customer = cur.fetchone()
-            customer_name = customer[0] if customer else f"Customer #{user_id}"
+            customer_name = (customer[0].strip() if customer and customer[0] else None) or f"Customer #{user_id}"
             
             cur.execute("UPDATE orders SET user_id = NULL WHERE user_id = %s", (user_id,))
             orders_detached = cur.rowcount or 0
