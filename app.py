@@ -4095,15 +4095,15 @@ def customers():
         cur.execute(
             f"""
             SELECT
-                MIN(o.id)                                     AS id,
-                MIN(u.id)                                     AS user_id,
-                MAX(TRIM(COALESCE(NULLIF(o.full_name,''), CONCAT(COALESCE(u.first_name,''),' ',COALESCE(u.last_name,''))))) AS name,
-                MAX(NULLIF(u.email,''))                       AS email,
+                MIN(o.id) AS id,
+                MIN(u.id) AS user_id,
+                MAX(TRIM(COALESCE(NULLIF(o.full_name,''), CONCAT(COALESCE(u.first_name,''),' ',COALESCE(u.last_name,''))))) AS customer_name,
+                MAX(NULLIF(u.email,'')) AS email,
                 MAX(COALESCE(NULLIF(TRIM(o.delivery_phone),''), NULLIF(TRIM(u.phone),''))) AS phone,
-                COUNT(*)                                      AS orders_count,
-                COALESCE(SUM(o.total_amount), 0)             AS total_spent,
-                MAX(o.created_at)                             AS last_order_date,
-                MAX({discount_expr})                          AS user_discount
+                COUNT(*) AS orders_count,
+                COALESCE(SUM(o.total_amount), 0) AS total_spent,
+                MAX(o.created_at) AS last_order_date,
+                MAX({discount_expr}) AS user_discount
             FROM orders o
             LEFT JOIN users u ON u.id = o.user_id
             {where_sql}
@@ -4119,9 +4119,9 @@ def customers():
         for r in rows:
             # Unpack with optional user_discount as the last column
             if len(r) >= 9:
-                cid, user_id, name, email, phone, orders_count, total_spent, last_dt, user_discount = r
+                cid, user_id, customer_name, email, phone, orders_count, total_spent, last_dt, user_discount = r
             else:
-                cid, user_id, name, email, phone, orders_count, total_spent, last_dt = r
+                cid, user_id, customer_name, email, phone, orders_count, total_spent, last_dt = r
                 user_discount = None
             # Simple tiering by total spent
             tier = 'CUSTOMER'
@@ -4139,7 +4139,7 @@ def customers():
                 'id': cid,
                 'user_id': user_id,
                 'is_registered': bool(user_id),
-                'name': name or '—',
+                'name': customer_name or '—',
                 'email': email or '',
                 'phone': phone or '',
                 'orders_count': int(orders_count or 0),
