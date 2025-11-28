@@ -4097,7 +4097,7 @@ def customers():
             SELECT
                 MIN(o.id)                                     AS id,
                 MIN(u.id)                                     AS user_id,
-                MAX(TRIM(COALESCE(NULLIF(o.full_name,''), CONCAT(u.first_name,' ',u.last_name)))) AS name,
+                MAX(TRIM(COALESCE(NULLIF(o.full_name,''), CONCAT(COALESCE(u.first_name,''),' ',COALESCE(u.last_name,''))))) AS name,
                 MAX(NULLIF(u.email,''))                       AS email,
                 MAX(COALESCE(NULLIF(TRIM(o.delivery_phone),''), NULLIF(TRIM(u.phone),''))) AS phone,
                 COUNT(*)                                      AS orders_count,
@@ -4109,7 +4109,7 @@ def customers():
             {where_sql}
             GROUP BY {group_key}
             {having_sql}
-            ORDER BY last_order_date DESC
+            ORDER BY MAX(o.created_at) DESC
             LIMIT %s OFFSET %s
             """,
             params + [per_page, offset]
