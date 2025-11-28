@@ -670,6 +670,8 @@
           // ← THIS IS THE KEY: re-init toggles on the new content
           (window.initReadMore && window.initReadMore(card));
           input.value = '';
+          // Reload page after successful reply
+          setTimeout(() => location.reload(), 1000);
         }catch(e){ showFlash(e && e.message || 'Failed', 'error'); }
       };
       send.addEventListener('click', submit);

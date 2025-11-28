@@ -811,6 +811,8 @@
                 return; 
               }
               if(card) card.remove();
+              // Reload page after successful delete
+              setTimeout(() => location.reload(), 1000);
             }catch(err){
               showConfirm('Error', err && err.message || 'Delete failed', () => {});
               btn.disabled = false;
@@ -844,6 +846,8 @@
                 return; 
               }
               if(card) card.remove();
+              // Reload page after successful delete
+              setTimeout(() => location.reload(), 1000);
             }catch(err){
               showConfirm('Error', err && err.message || 'Delete failed', () => {});
               btn.disabled = false;
